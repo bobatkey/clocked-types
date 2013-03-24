@@ -1,0 +1,101 @@
+\documentclass[natbib,preprint]{sigplanconf}
+
+\usepackage[usenames]{color}
+\definecolor{citationcolour}{rgb}{0,0.4,0.2}
+\definecolor{linkcolour}{rgb}{0,0,0.8}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,
+            urlcolor=linkcolour,
+            linkcolor=linkcolour,
+            citecolor=citationcolour,
+            pdftitle=Productive Coprogramming with Guarded Recursion,
+            pdfauthor={Robert Atkey, Conor McBride},
+            pdfkeywords={}}  
+\def\sectionautorefname{Section}
+\def\subsectionautorefname{Section}
+
+\title{Productive Coprogramming with Guarded Recursion}
+
+\authorinfo{Robert Atkey}
+           { }
+           {bob.atkey@gmail.com}
+
+\authorinfo{Conor McBride}
+           {University of Strathclyde}
+           {Conor.McBride@strath.ac.uk}
+
+\usepackage{mathpartir}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{stmaryrd}
+\usepackage[all]{xy}
+
+% Colouring in...
+\definecolor{highlight}{rgb}{0.8,0.1,0.1}
+\definecolor{cons}{rgb}{0.8,0.1,0.2}
+\definecolor{elim}{rgb}{0.1,0.5,0.35}
+\definecolor{defnd}{rgb}{0.1,0.2,0.8}
+\definecolor{greybg}{rgb}{0.8,0.8,0.8}
+\newcommand{\highlight}[1]{\textcolor{highlight}{#1}}
+\newcommand{\cons}[1]{\textcolor{cons}{\textsf{#1}}}
+\newcommand{\elim}[1]{\textcolor{elim}{\textsf{#1}}}
+\newcommand{\defnd}[1]{\mathit{#1}}
+\newcommand{\kw}[1]{\textbf{#1}}
+\newcommand{\tyname}[1]{\textrm{#1}}
+\newcommand{\ident}[1]{\textit{#1}}
+\newcommand{\defn}[1]{\textcolor{defnd}{\ident{#1}}}
+
+% other stuff
+\newcommand{\sepbar}{\mathrel|}
+\newcommand{\Set}{\mathsf{Set}}
+\newcommand{\sem}[1]{\llbracket #1 \rrbracket}
+\newcommand{\op}{\mathsf{op}}
+\newcommand{\sortType}{\texttt{type}}
+
+\newcommand{\delay}[1]{\mathord{\rhd\kern-0.4em^{#1}}}
+
+\newcommand{\clkSem}[1]{\llbracket #1 \rrbracket}
+\newcommand{\ClkPER}{\mathrm{ClkPER}}
+\newcommand{\PER}{\mathrm{PER}}
+\newcommand{\semCons}[1]{\mathsf{#1}}
+\newcommand{\tySem}[1]{\llbracket #1 \rrbracket}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+
+\newcommand{\lemref}[1]{\hyperref[#1]{Lemma \ref*{#1}}}
+\newcommand{\thmref}[1]{\hyperref[#1]{Theorem \ref*{#1}}}
+
+\newcommand{\fixme}[1]{\textbf{FIXME: #1}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  
+\end{abstract}
+
+\category{D.1.1}{Programming techniques}{Applicative (functional)
+  programming} \category{D.2.4}{Software Engineering}{Software/Program
+  Verification} \category{D.3.3}{Programming Languages}{Language
+  Constructs and Features---Data types and structures}
+
+\terms
+  Languages, Theory, Types, Recursion
+
+\keywords
+  coalgebras, corecursion, guarded recursion, total functional programming, delay modality
+
+\input{introduction.tex}
+\input{background.tex}
+\input{type-system.tex}
+\input{semantics.tex}
+\input{fixpoint-types.tex}
+\input{conclusions.tex}
+
+\bibliographystyle{plainnat}
+\bibliography{paper}
+
+\end{document}

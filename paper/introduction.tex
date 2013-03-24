@@ -1,0 +1,603 @@
+\section{Introduction}\label{sec:introduction}
+
+Total functional programming... and its relationship to type theory.
+
+Use folds and unfolds to construct total recursive programs. Can
+construct quite comfortable recursion combinators. See McBride.
+
+Could also write corecursion programs using unfolds, but this seems
+difficult, and in particular makes the ``state'' explicit, which
+completely changes the operational behaviour.
+
+Syntactic guardedness checks work, but are very awkward to program
+with.
+
+Can use guarded recursion, but Nakano's system loses the distinction
+between inductive and coinductive types. We would like to keep this
+distinction.
+
+In the remainder of this introductory section, we ...
+
+\subsection{Guardedness Checkers and Guarded Recursion}
+
+Several systems with support for corecursion, such as Coq and Agda,
+currently make use of syntactic guardedness checks to ensure
+productivity of programs defined using corecursion. Without these
+checks, soundness of these systems cannot be guaranteed. An
+unfortunate aspect of these guardedness checks is their
+non-compositionality. We now demonsrate the problem with an example,
+and see how the guarded recursion of Nakano can be used to provide a
+type-based guardedness check.
+
+We will use Haskell notation for each of our informal examples, since
+it serves to illustrate the issues concisely. Consider the following
+Haskell declaration of a type of infinite streams of integers:
+\begin{displaymath}
+  \kw{data}\ \tyname{Stream} = \cons{StreamCons}\ \tyname{Integer}\ \tyname{Stream}
+\end{displaymath}
+% FIXME: something about (co)data coincidence
+
+An example of a $\tyname{Stream}$ is the infinite stream of $1$s:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{ones} :: \tyname{Stream} \\
+    \defn{ones} = \cons{StreamCons}\ 1\ \ident{ones}
+  \end{array}
+\end{displaymath}
+It is easy to see that this recursive definition is \emph{guarded};
+$\ident{ones}$ is only invoked recursively within an application of
+the stream constructor $\cons{StreamCons}$. This definition of
+$\ident{ones}$ defines an infinite data structure, but each piece of
+the data structure is delivered to us in finite time.
+
+An example of a non-guarded definition is the filter function,
+extended from finite lists to infinite streams:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{filter} :: (\tyname{Integer} \to \tyname{Bool}) \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{filter}\ \ident{f}\ (\cons{StreamCons}\ \ident{z}\ \ident{s}) = \\
+    \hspace{0.5cm}\kw{if }\ident{f}\ \ident{z}\kw{ then }\ident{filter}\ \ident{f}\ \ident{s}\kw{ else }\cons{StreamCons}\ \ident{z}\ (\ident{filter}\ \ident{f}\ \ident{s})
+  \end{array}
+\end{displaymath}
+This definition is not guarded: in the $\kw{then}$-case of the
+conditional, the recursive call to $\ident{filter}$ is not within an
+application of the stream constructor $\cons{StreamCons}$. In this
+case, the syntactic guardedness checker is right to reject this
+definition: consider the case when all of the elements of the stream
+are filtered out; $\ident{filter}$ will never return anything, and so
+will be non-productive.
+
+Syntactic guardedness checkers are not always so helpful. The
+following higher-order function defines a general merge function on
+pairs of streams:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{mergef} :: (\tyname{Integer} \to \tyname{Integer} \to \tyname{Stream} \to \tyname{Stream}) \to \\
+    \textcolor{white}{\textrm{mergef} :: }\tyname{Stream} \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{mergef}\ \ident{f}\ (\cons{StreamCons}\ \ident{x}\ \ident{xs})\ (\cons{StreamCons}\ \ident{y}\ \ident{ys}) = \\
+    \quad\quad \ident{f}\ \ident{x}\ \ident{y}\ (\ident{mergef}\ \ident{f}\ \ident{xs}\ \ident{ys})
+  \end{array}
+\end{displaymath}
+Any syntactic checker looking for constructors to guard recursive
+calls will reject this function: there are no constructors anywhere in
+the definition! This rejection is with good reason: there are
+functions that we could pass to $\ident{mergef}$ that would render it
+unproductive. For example, this function will cause $\ident{mergef}$
+to hang on all pairs of streams:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{badf} :: \tyname{Integer} \to \tyname{Integer} \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{badf}\ \ident{x}\ \ident{y}\ \ident{s} = \ident{s}
+  \end{array}
+\end{displaymath}
+On the other hand, there are plenty of good functions $\ident{f}$ that
+we could use with $\ident{mergef}$ to obtain productive functions, but
+a syntactic guardedness checker does not allow us to express this
+fact.
+
+A possible way out of this problem is to retain the syntactic
+guardedness check, and work around it by changing the type of
+$\ident{f}$. For instance, we could change required type of
+$\ident{f}$ to
+\begin{displaymath}
+  \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to \tyname{Integer}
+\end{displaymath}
+to allow for merging functions that operate element-wise. Or we could
+change the type to
+\begin{displaymath}
+  \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to (\tyname{Integer}, [\tyname{Integer}])
+\end{displaymath}
+which would allow for the functional argument to replace each pair of
+elements from the input streams with a non-empty list of values. The
+general trick is to make $\ident{f}$ return ``instructions'' on how to
+transform the stream back to $\ident{mergef}$, which then executes
+them in a way that the syntactic guardedness checker can see is
+guarded. However, it is difficult to see whether we could capture all
+the possibilities for good $\ident{f}$s in a single type. We could
+give yet another type which would accommodate the behaviour of the
+following possible value of $\ident{f}$:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{f}\ \ident{x}\ \ident{y}\ \ident{s} = \cons{StreamCons}\ \ident{x}\ (\ident{map}\ (+\ident{y})\ \ident{s})
+  \end{array}
+\end{displaymath}
+Incorporating the forms of all the possible productive definitions
+into a single type seems impractical. Moreover, we complicate the
+definition of $\ident{mergef}$, which is now forced to become
+essentially an implementation of a virtual machine for running little
+stream transformer programs returned by its functional argument.
+
+A more promising type-based solution is provided by Nakano
+\cite{nakano00FIXME}. Nakano introduces a guardedness type constructor
+that represents values that may only be used in a guarded way. Thus
+Nakano transports the guardedness checks from the syntactic level into
+the type system. We write this constructor, applied to a type $A$, as
+$\rhd A$ (Nakano uses the notation $\bullet A$, but the $\rhd A$
+notation has become more common, and conveys an intuitive idea of
+movement in time). A useful way to think of $\rhd A$ is as a value of
+$A$ that is only available ``tomorrow''; the temporal gap between
+today and tomorrow can only be bridged by the application of a
+constructor such as $\cons{StreamCons}$. The reading of $\rhd A$ as a
+value of $A$ tomorrow is explicitly supported in step-indexed
+semantics by means of a clock counting down to
+zero. %FIXME: forward ref, and refs to other peoples semantics
+
+We now alter the type of $\ident{f}$ to be:
+\begin{displaymath}
+  \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}
+\end{displaymath}
+This type captures the intution that the stream argument to
+$\ident{f}$ must be only be used in a guarded way. To introduce
+guarded types into the system, we must make some changes to the types
+of our primitives. We alter the type of the construct
+$\cons{StreamCons}$ as follows, and also introduce a stream
+deconstructor that we previously implicitly used via pattern matching:
+\begin{displaymath}
+  \begin{array}{l}
+    \cons{StreamCons} :: \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream} \\
+    \elim{deStreamCons} :: \tyname{Stream} \to (\tyname{Integer}, \rhd\tyname{Stream})
+  \end{array}
+\end{displaymath}
+The type of $\cons{StreamCons}$ shows that it takes a stream that may
+only be used guardedly, and produces a stream without the guardedness
+restriction. This is in line with the temporal intuition we have of
+the type $\rhd\tyname{Stream}$. The inverse operation
+$\elim{deStreamCons}$ takes a full stream and returns the integer and
+the \emph{guarded} remainder of the stream.
+
+To give the guardedness type constructor force, Nakano proposes the
+following alternative type of the fixpoint operator:
+\begin{displaymath}
+  \kw{fix} :: (\rhd A \to A) \to A
+\end{displaymath}
+The standard typing of the $\kw{fix}$ operator is $(A \to A) \to
+A$. Nakano's alternative typing ensures that recursive definitions
+must be guarded by only allowing access to recursively generated
+values ``tomorrow''.
+
+To actually program with the guardedness constructor, we equip it with
+the structure of an applicative functor \cite{paterson08applicative}:
+\begin{displaymath}
+  \begin{array}{l}
+    \kw{pure} :: A \to \rhd A \\
+    \kw{$(\circledast)$} :: \rhd (A \to B) \to \rhd A \to \rhd B
+  \end{array}
+\end{displaymath}
+Nakano uses an system of subtyping with respect to the guardedness
+type constructor that has a similar effect to assuming that $\rhd$ is
+an applicative functor. We propose to treat $\rhd$ applicative functor
+here, due to the greater ease with which it can be incorporated into a
+standard functional programming language like Haskell. Note that
+$\rhd$ is not a monad: a join operation of type $\rhd(\rhd A) \to \rhd
+A$ would allow us to collapse multiple guardedness obligations. Our
+model in \autoref{sec:semantics} refutes the existence of a join
+operator for $\rhd$.
+
+With the guardedness type constructor, and its applicative functor
+structure, we can rewrite the $\ident{mergef}$ function to allow the
+alternative typing which only allows functional arguments that will
+lead to productive definitions.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{mergef} :: (\tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}) \to \\
+    \textcolor{white}{\textrm{mergef} :: }\ \tyname{Stream} \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{mergef}\ \ident{f} = \kw{fix}\ (\lambda \ident{g}\ \ident{xs}\ \ident{ys}. \\
+    \hspace{2.5cm} \kw{let}\ (\ident{x}, \ident{xs'}) = \elim{deStreamCons}\ \ident{xs} \\
+    \hspace{2.5cm} \textcolor{white}{\kw{let}\ }(\ident{y}, \ident{ys'}) = \elim{deStreamCons}\ \ident{ys} \\
+    \hspace{2.5cm} \kw{in}\ \ident{f}\ \ident{x}\ \ident{y}\ (\ident{g} \circledast \ident{xs'} \circledast \ident{ys'}))
+  \end{array}
+\end{displaymath}
+Aside from the explicit uses of $\kw{fix}$ and $\elim{deStreamCons}$,
+which were hidden by syntactic sugar in our previous definition, the
+only substantial changes to the definition are the uses of applicative
+functor apply ($\circledast$). These uses indicate operations that are
+occuring under a guardedness type constructor.
+
+\subsection{From Infinite to Finite}
+
+The type system for guarded recursion that we described above allows
+us to remove the syntactic guardedness check and replace it with a
+type-based one. However, aside from proposing applicative functor
+structure as a convienent way to incorporate the guardedness type
+constructor into a functional language, we have not gone much beyond
+Nakano's original system. We now describe a problem with basic guarded
+recursion when attempting to combine infinite and finite data. We
+propose a solution to this problem in the
+\hyperref[sec:clock-vars]{next subsection}.
+
+Consider the $\ident{take}$ function that reads a finite prefix of an
+infinite stream into a list. This function will have the following type:
+\begin{displaymath}
+  \defn{take} :: \tyname{Natural} \to \tyname{Stream} \to [\tyname{Integer}]
+\end{displaymath}
+where we wish to regard the type $[\tyname{Integer}]$ as the type of
+\emph{finite} lists of integers. The explicit segregation of
+well-founded and non-well-founded types is important for our intended
+applications of total functional programming and theorem proving.
+
+We also assume that the type $\tyname{Natural}$ of natural numbers is
+well-founded, so we may attempt to write $\ident{take}$ by structural
+recursion on its first argument. However, we run into a difficulty,
+which we have \colorbox{greybg}{highlighted}.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{take} :: \tyname{Natural} \to \tyname{Stream} \to [\tyname{Integer}] \\
+    \defn{take}\ 0\ \ident{s} = [] \\
+    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \colorbox{greybg}{$\ident{s'}$} \\
+    \quad \kw{where}\ (\ident{x}, \ident{s'}) = \elim{deStreamCons}\ \ident{s}
+  \end{array}
+\end{displaymath}
+The problem is that the variable $\ident{s'}$, which we have obtained
+from $\elim{deStreamCons}$, has type $\rhd\tyname{Stream}$. However,
+to invoke the $\ident{take}$ function structurally recursively, we
+need something of type $\tyname{Stream}$, without the guardedness
+restriction.
+
+We analyse this problem in terms of our intuitive reading of
+$\rhd\tyname{Stream}$ as a stream that is available
+``tomorrow''. Nakano's typing discipline slices the construction of
+infinite data like $\tyname{Stream}$ into discrete steps. In contrast,
+a well-founded data type like $[\tyname{Integer}]$ lives entirely in
+the moment. While a stream is being constructed, this slicing is
+required so that we do not get ahead of ourselves and attempt to build
+things today from things that will only be available tomorrow. But
+once a stream has been fully constructed, we ought to be able to blur
+the distinctions between the days of its construction. We accomplish
+this in our type system by means of \emph{clock variables}, and
+quantification over them.
+
+\subsection{Clock Variables}\label{sec:clock-vars}
+
+We extend the type system with \emph{clock variables} $\kappa$. A
+clock variable $\kappa$ represents an individual time sequence that
+can be used for safe construction of infinite data like streams. In
+our model, clock variables are interpreted as counters running down to
+zero in the style of step-indexed models \cite{mcallester-appel}. By
+quantifying over all counters we are able to accommodate all possible
+finite observations on an infinite data structure.
+
+We annotate the guardedness type constructor with a clock variable to
+indicate which time stream we are considering: $\delay\kappa
+A$. Infinite data types such as streams are now annotated by their
+clock variable, indicating the time stream that they are being
+constructed on. We have the following new types for the constructor
+and deconstructor:
+\begin{displaymath}
+  \begin{array}{l}
+    \cons{StreamCons$^\kappa$} :: \tyname{Integer} \to \delay\kappa \tyname{Stream}^\kappa \to \tyname{Stream}^\kappa \\
+    \elim{deStreamCons$^\kappa$} :: \tyname{Stream}^\kappa \to (\tyname{Integer}, \delay\kappa\tyname{Stream}^\kappa)    
+  \end{array}
+\end{displaymath}
+We now regard the type $\tyname{Stream}^\kappa$ as the type of
+infinite streams in the process of construction. A finished infinite
+stream is represented by \emph{quantifying} over the relevant clock
+variable: $\forall \kappa. \tyname{Stream}^\kappa$. If we think of
+each possible downward counting counter that $\kappa$ could represent,
+then this universally quantified type allows for any counter large
+enough to allow us a given finite extraction of data from the
+stream. We use the notation $\Lambda\kappa. e$ and $e[\kappa]$ to
+indicate clock abstraction and application respectively, in the style
+of explicitly typed System F type abstraction and application.
+
+The fixpoint operator is parameterised by the clock variable:
+\begin{displaymath}
+  \kw{fix} :: \forall \kappa. (\delay\kappa A \to A) \to A
+\end{displaymath}
+as is the applicative functor structure carried by $\delay\kappa$:
+\begin{displaymath}
+  \begin{array}{l}
+    \kw{pure} :: \forall \kappa. A \to \delay\kappa A \\
+    \kw{$(\circledast)$} :: \forall \kappa. \delay\kappa (A \to B) \to \delay\kappa A \to \delay\kappa B
+  \end{array}
+\end{displaymath}
+We also add an additional piece of structure to eliminate guarded
+types that have been universally quantified:
+\begin{displaymath}
+  \kw{force} :: (\forall \kappa.\ \delay\kappa A) \to (\forall \kappa.\ A)
+\end{displaymath}
+Intuitively, if we have a value that, for any time stream, is one time
+step away, we simply instantiate it with a time stream that is one
+step greater and extract the value. Note that the universal
+quantification is required on the right hand side since $\kappa$ may
+appear free in the type $A$. The $\kw{force}$ operator has a similar
+flavour to the $\kw{runST} :: (\forall s. \tyname{ST}\ s\ a) \to a$
+for the $\tyname{ST}$ monad
+\cite{DBLP:journals/jfp/MoggiS01,launchbury-spj-FIXME}. In both cases,
+rank-2 quantification is used to prevent values from ``leaking'' out
+from the context in which it is safe to use them.
+
+Using $\kw{force}$ we may write a deconstructor for completed streams
+of type $\forall \kappa. \tyname{Stream}^\kappa$.
+\begin{displaymath}
+  \begin{array}{l}
+    \elim{deStreamCons} :: (\forall \kappa. \tyname{Stream}^\kappa) \to (\tyname{Integer}, \forall \kappa. \tyname{Stream}^\kappa) \\
+    \elim{deStreamCons}\ \ident{x} = \\
+    \quad\quad
+    \begin{array}[t]{l}
+      (\Lambda \kappa. \kw{fst}\ (\elim{deStreamCons}^\kappa\ (\ident{x}[\kappa])),\\
+      \quad\kw{force}\ (\Lambda \kappa. \kw{snd}\ (\elim{deStreamCons}^\kappa\ (\ident{x}[\kappa]))))
+    \end{array}
+  \end{array}
+\end{displaymath}
+In this definition we have made use of a feature of our type system
+that states that the type equality $\forall \kappa. A \equiv A$ holds
+whenever $\kappa$ is not free in $A$. Our system also includes other
+type equalities that demonstrate how clock quantification interacts
+with other type formers. These are presented in
+\autoref{sec:type-equality} below.
+
+In the presence of clock variables, our definition of $\ident{take}$
+is well-typed and we get the function we desire: taking a finite
+observation of a piece of infinite data:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{take} :: \tyname{Natural} \to (\forall \kappa. \tyname{Stream}^\kappa) \to [\tyname{Integer}] \\
+    \defn{take}\ 0\ \ident{s} = [] \\
+    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \ident{s'} \\
+    \quad \kw{where}\ (\ident{x}, \ident{s'}) = \elim{deStreamCons}\ \ident{s}
+  \end{array}
+\end{displaymath}
+
+\subsection{Main Results of this Paper}\label{sec:main-results-intro}
+
+We are now in a position to state the main technical results of this
+paper. In \autoref{sec:type-system} we present a type system that
+includes a notion of strictly positive type operator\footnote{Our
+  semantics can actually handle least fixpoints of positive type
+  constructors and not just strictly positive ones. We restrict to
+  strictly positive inductive types so that we also admit the
+  possibility of a set-theoretic semantics.}. We include a least
+fixpoint operator $\mu X. F[X]$. For normal strictly positive type
+operators $F$ (i.e. ones that do not involve the $\delay\kappa$
+operator), $\mu X. F[X]$ is exactly the normal least fixpoint of
+$F$. Thus we can define the normal well-founded types of natural
+numbers, lists, trees and so on. Our calculus contains constructors
+$\cons{Cons$_F$} :: F[\mu X. F] \to \mu X. F$ for building values of
+these types, and recursion combinators for eliminating values:
+\begin{displaymath}
+  \elim{primRec$_{F,A}$} :: (F[(\mu X. F) \times A] \to A) \to \mu X. F[X] \to A 
+\end{displaymath}
+We opt to use primitive recursion instead of a fold operator
+(i.e. $\ident{fold} :: (F[A] \to A) \to \mu X. F[X] \to A$) because
+it allows for constant time access to the top-level of an inductive
+data structure.
+
+We show in the proof of \thmref{thm:initial-f-algebra} that $\mu X. F$
+is the carrier of the initial $F$-algebra in our model. Therefore, we
+may use standard reasoning techniques about initial algebras to reason
+about programs written using the $\elim{primRec}$ combinator.
+
+When we consider strictly positive type operators of the form
+$F[\delay\kappa X]$, where $\kappa$ does not appear in $F$ then, in
+addition to $\mu X. F[\delay\kappa X]$ being the least fixpoint of the
+operator $F[\delay\kappa -]$, it is also the \emph{greatest}
+fixpoint. The $\ident{unfold}$ combinator can be implemented in terms
+of the $\kw{fix}$ operator, and $\cons{Cons}$:
+\begin{displaymath}
+  \begin{array}[t]{l}
+    \defn{unfold$_F$} :: \forall \kappa. (A \to F[\delay\kappa A]) \to A \to \mu X. F[\delay\kappa X] \\
+    \defn{unfold$_F$} = \Lambda \kappa.\lambda \ident{f}. \kw{fix}[\kappa]\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}\ (\ident{fmap}_F\ (\lambda \ident{x}. \ident{g} \circledast \ident{x})\ (\ident{f}\ \ident{a})))
+  \end{array}
+\end{displaymath}
+where $\ident{fmap}_F :: (A \to B) \to (F[A] \to F[B])$ is the
+functorial mapping combinator associated with the strictly positive
+type operator $F$. Note that without the additional $\delay\kappa$ in
+$F[\delay\kappa -]$, there would be no way to define $\ident{unfold}$,
+due to the typing of $\kw{fix}$.
+
+To make observations on elements, we define a $\ident{deCons$_F$}$
+combinator for every $F$, using the primitive recursion
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{deCons$_F$} :: \forall \kappa. (\mu X. F[\delay\kappa X]) \to F[\delay\kappa \mu X. F[\delay\kappa X]] \\
+    \defn{deCons$_F$} = \Lambda \kappa. \elim{primRec}\ (\lambda \ident{x}.\ \ident{fmap}_{F[\delay\kappa-]}\ (\lambda \ident{y}.\kw{fst}\ \ident{y})\ \ident{x})
+  \end{array}
+\end{displaymath}
+The proof of \thmref{thm:final-f-de-coalgebra} shows that these
+definitions of $\ident{unfold$_F$}$ and $\ident{deCons$_F$}$ exhibit
+$\mu X. F[\delay\kappa X]$ as the final $F[\delay\kappa-]$-coalgebra,
+using $\ident{deCons$_F$}$ as the structure map. This means that
+$\ident{unfold$_F$}[\kappa] f$ is the unique $F[\delay\kappa-]$-coalgebra
+homomorphism from $\mu X. F[\delay\kappa-]$ to $A$.
+
+\thmref{thm:final-f-de-coalgebra} only gives us final coalgebras in
+the case when the recursion in the type is guarded by the type
+constructor $\delay\kappa-$. So we do not yet have a dual to the least
+fixpoint type constructor $\mu X. F$. However, as we hinted above in
+the case of streams, we can use clock quantification to construct a
+final $F$-coalgebra, where $F$ need not contain an occurence of
+$\delay\kappa-$.
+
+For the type $\forall \kappa. \mu X. F[\delay\kappa-]$ we define an
+$\ident{unfold$^\nu_F$}$ operator, in a similar style to the
+$\ident{unfold$_F$}$ operator above. However, this operator takes an
+argument of type $(A \to F[A])$, with no mention of guardedness.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{unfold$^\nu_F$} :: (A \to F[A]) \to A \to \forall \kappa. \mu X. F[\delay\kappa X] \\
+    \defn{unfold$^\nu_F$} = \lambda \ident{f}\ \ident{a}. \Lambda \kappa. \\
+    \quad\quad\kw{fix}[\kappa]\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}\ (\ident{fmap}_F (\lambda \ident{x}. \ident{g} \circledast \kw{pure}\ \ident{x})\ (\ident{f}\ \ident{a})))\ \ident{a}
+  \end{array}
+\end{displaymath}
+We can also define the corresponding deconstructor, building on the
+definition of $\ident{deCons$_F$}$ above, but also using the $\kw{force}$
+construct in conjunction with clock quantification. This is a
+generalisation of the definition of $\elim{deStreamCons}$ above.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{deCons$^\nu_F$} :: (\forall \kappa. \mu X. F[\delay\kappa X]) \to F[\forall \kappa. \mu X. F[\delay\kappa X]] \\
+    \defn{deCons$^\nu_F$} = \ident{fmap$_F$}\ (\lambda x. \kw{force}\ x)\ (\Lambda \kappa. \ident{deCons$_F$}[\kappa]\ (x[\kappa]))
+  \end{array}
+\end{displaymath}
+In the application of $\ident{fmap$_F$}$, we make use of the type
+equalities in our calculus, which allow us to treat the types $\forall
+\kappa. F[X]$ and $F[\forall \kappa. X]$ as equivalent, when $\kappa$
+does not appear in $F$. We present the type equalities in
+\autoref{sec:type-equality}, and prove them sound in
+\autoref{sec:type-interp}.
+
+Our last main technical result, \thmref{thm:final-f-coalgebra}, states
+that, in the semantics we define \autoref{sec:semantics}, $\forall
+\kappa. \mu X. F[\delay\kappa-]$ actually is the final
+$F$-coalgebra. The use of clock quantification has allowed us to
+remove mention of the guardedness type constructor, and given us a way
+to safely program and reason about $F$-coalgebras.
+
+% FIXME: explain why $\exists \kappa. \mu X. F[\delay\kappa X]$ isn't
+% the initial algebra for $F$
+
+\subsection{Circular Traversals of Trees}
+
+We now present a perhaps unexpected application of the use of clock
+quantification that does not relate to ensuring productivity of
+recursive programs generating infinite data. An interesting use of
+laziness in functional programming languages is to peform single-pass
+transformations of data structures that would appear to require at
+least two passes. A classic example, due to Bird
+\cite{bird84circular}, is the $\ident{replaceMin}$ function that
+replaces each value in a binary tree with the minimum of all the
+values in the tree, in a single pass. In normal Haskell, this function
+is written as follows:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{replaceMin} :: \tyname{Tree} \to \tyname{Tree} \\
+    \defn{replaceMin}\ \ident{t} = \kw{let}\ (\ident{t'}, \ident{m}) = \ident{replaceMinBody}\ (\ident{t}, \ident{m})\ \kw{in}\ \ident{t'} \\
+    \hspace{0.6cm} \kw{where} \\
+    \hspace{1cm} \defn{replaceMinBody}\ (\cons{Leaf}\ \ident{x},\ \ident{m}) = (\cons{Leaf}\ \ident{m}, \ident{x}) \\
+    \hspace{1cm} \defn{replaceMinBody}\ (\cons{Br}\ \ident{l}\ \ident{r},\ \ident{m}) = \\
+    \hspace{2cm} \kw{let}\ (\ident{l'}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
+    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r'}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
+    \hspace{2cm} \kw{in}\ (\cons{Br}\ \ident{l'}\ \ident{r'},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+  \end{array}
+\end{displaymath}
+The interesting part of this function is the first $\kw{let}$
+expression. This takes the minimum value $\ident{m}$ computed by the
+traversal of the tree and passes it into the \emph{same} traversal to
+build the new tree. Intuitively, the reason that this works is that
+the overall minimum value is never used in the computation of the
+minimum, only the construction of the new tree. The computation of the
+minimum and the construction of the new tree conceptually exist at
+different moments in time, and it is only safe to treat them the same
+after both have finished.
+
+Using explicit clock variables we can give a version of the
+$\ident{replaceMin}$ definition that demonstrates that we have
+actually defined a total function from trees to trees. The use of
+clock variables allows us to be explicit about the time when various
+operations are taking place.
+
+Out first step is to replace the circular use of $\kw{let}$ with a
+\emph{trace} combinator defined in terms of the $\kw{fix}$ operator:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{trace} :: \forall \kappa.\ ((A[\kappa], \delay\kappa U) \to (B[\kappa], U)) \to A[\kappa] \to B[\kappa] \\
+    \defn{trace} = \Lambda \kappa. \lambda \ident{f}\ \ident{a}. \\
+    \quad\quad\kw{fst}\ (\kw{fix}\ (\lambda \ident{h}\ \ident{a}.\ \ident{f}\ (\ident{a}, \kw{pure}\ (\lambda \ident{x}. \kw{snd}\ \ident{x}) \circledast (\ident{h} \circledast \kw{pure}\ \ident{a})))\ \ident{a})
+  \end{array}
+\end{displaymath}
+In the application of the $\kw{fix}$ operator, $h : \delay\kappa (A
+\to (B \times U))$.  The notation $A[\kappa]$ (and $B[\kappa]$)
+indicates that $\kappa$ may appear free in the types $A$ and $B$. %FIXME: relationship to trace defined from normal fix?
+
+We have named this definition $\ident{trace}$ due to similarity of its
+type to the trace operator of traced symmetric monoidal categories
+\cite{something}. Trace operators provide an axiomatisaion of the
+notion of feedback operator that has many applications in denotational
+semantics. The key difference with our definition is that the first
+occurence of the ``feedback type'' $U$ is guarded by the guardedness
+type constructor. This will prevent us from writing definitions that
+get ahead of themselves and access data that is not yet ready.
+
+\newcommand{\hlchangem}[1]{\colorbox{greybg}{$#1$}}
+\newcommand{\hlchange}[1]{\colorbox{greybg}{#1}}
+
+We now rewrite the $\ident{replaceMinBody}$ function so that we can
+apply $\ident{trace}$ to it. We have \hlchange{highlighted} the
+changes from the previous definition.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{replaceMinBody} :: \hlchangem{\forall \kappa.}(\tyname{Tree},\hlchangem{\delay\kappa}\tyname{Integer}) \to (\hlchangem{\delay\kappa}\tyname{Tree},\tyname{Integer}) \\
+    \hspace{0cm} \defn{replaceMinBody}\ (\cons{Leaf}\ \ident{x},\ \ident{m}) = (\hlchangem{\kw{pure}}\cons{Leaf}\ \hlchangem{\circledast}\ident{m}, \ident{x}) \\
+    \hspace{0cm} \defn{replaceMinBody}\ (\cons{Br}\ \ident{l}\ \ident{r},\ \ident{m}) = \\
+    \hspace{2cm} \kw{let}\ (\ident{l'}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
+    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r'}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
+    \hspace{2cm} \kw{in}\ (\hlchangem{\kw{pure}}\cons{Br}\ \hlchangem{\circledast}\ident{l'}\ \hlchangem{\circledast}\ident{r'},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+  \end{array}
+\end{displaymath}
+The changes required are minor: we must change the type, and use the
+applicative functor structure of $\delay\kappa$ to indicate when
+computations are taking place ``tomorrow''.
+
+Applying $\ident{trace}$ to $\ident{replaceMinBody}$, and using
+$\kw{force}$ to remove the now redundant occurence of $\delay\kappa$,
+we can define the full $\ident{replaceMin}$ function in our system:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{replaceMin} :: \tyname{Tree} \to \tyname{Tree} \\
+    \defn{replaceMin}\ \ident{t} = \kw{force}\ (\Lambda \kappa. \ident{trace}[\kappa]\ (\ident{replaceMinBody}[\kappa])\ \ident{t})
+  \end{array}
+\end{displaymath}
+By the soundness property of our system that we prove in
+\autoref{sec:semantics}, we are assured that we have defined a total
+function from trees to trees. The standard Haskell type system does
+not provide this guarantee.
+
+\subsection{Content and Contributions of this Paper}
+
+In the next section, \autoref{sec:background} we place our work in the
+context of previous work on guarded recursion and safe
+coprogramming. In \autoref{sec:type-system} we formally define our
+typed $\lambda$-calculus, which includes the features of inductive
+types, guarded recursion and clock quantification that we introduced
+above. We endow our calculus with a denotational semantics in
+\autoref{sec:semantics}.  The denotational semantics allows us to
+prove the key semantic soundness property, which entails productivity
+for all definitions we make in the calculus. It also allows to derive
+the key initial and final (co)algebras properties we desire from our
+calculus. In \autoref{sec:conclusions}, we set out our conclusions.
+
+We identify the contributions of this paper as follows:
+\begin{enumerate}
+\item We define an extension of Nakano's guarded recursion calculus
+  that incorporates inductive types and clock quantification. The
+  combination of these features allows the programmer to express
+  corecursion in a convienient way, without needing express everything
+  by means of $\ident{unfold}$ operators.
+\item We give a denotational semantics for our calculus that allows us
+  to prove semantic type soundness for all well-typed terms, and to
+  show that initial and final (co)algebras exist in our calculus.
+\item Our denotational semantics can also be read as a translation
+  from well-typed terms of our calculus into the untyped lazy
+  $\lambda$-calculus. Thus we have also described a compilation scheme
+  for our calculus, and our semantic type soundness property shows
+  that it is correct.
+\item We also describe several examples of the use of our calculus,
+  highlight its effectiveness for defining corecursive programs. An
+  unexpected additional benefit is the ability to handle circular
+  programs such as Bird's $\ident{replaceMin}$ function, which do not
+  use coinductive data types.
+\end{enumerate}
+
+%%% Local Variables:
+%%% TeX-master: "paper"
+%%% End:

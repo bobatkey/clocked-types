@@ -1,0 +1,845 @@
+\section{Semantics}\label{sec:semantics}
+
+We now present a denotational semantics for the type system we
+presented in the \hyperref[sec:type-system]{previous section}. This
+semantics establishes the key soundness properties: avoidance of
+non-terminating functions and correct representation of final
+coalgebras.
+
+In \autoref{sec:semantics-of-programs} we define an untyped model of
+the calculus we defined in the previous section. Each term of the
+calculus is interpreted in a domain-theoretic model of the untyped
+lazy $\lambda$-calculus. A highlight of this interpretation is that
+the $\kw{fix}$ operator from our calculus is interpreted directly as
+the domain-theoretic fixpoint in the model. In
+\autoref{sec:clock-envs} we start to define the semantics of types, by
+first defining the semantics of the clock contexts $\Delta$. Clock
+contexts are interpreted as clock environments: collections of
+step-indexing counters, counting down. Then in
+\autoref{sec:semantic-types} we define semantic types as special kinds
+of partial equivalence relations (PERs) over the untyped
+domain-theoretic model, indexed by a clock environments. In
+\autoref{sec:type-interp}, we show how to interpret each of the
+syntactic types in our calculus as semantic types, and in
+\autoref{sec:semantic-soundness} we show our first main result: that
+every well-typed term is semantically well-typed. Finally, in
+\autoref{sec:fixpoint-types}, we state and prove the initiality and
+finality of the various definitions of fixpoint types that we stated
+in \autoref{sec:main-results-intro}.
+
+\subsection{Semantics of Programs}\label{sec:semantics-of-programs}
+
+We interpret terms of our programming language in (a mild extension
+of) the standard domain theoretic model of the untyped lazy
+$\lambda$-calculus \cite{PittsAM:compavm}. The key feature of this
+semantics is the erasure of anything to do with the guardedness type
+constructor $\delay\kappa-$ and the clock variables and
+quantification. The $\kw{fix}$ operator is ``implemented'' directly as
+the domain-theoretic fixpoint. This semantics can be seen as a
+compilation process from our typed, guarded and clocked calculus into
+the untyped lazy $\lambda$-calculus. The semantic type soundness
+property that we prove in \autoref{sec:semantic-soundness} shows that
+our typing discipline ensures that we only compile to productive
+programs.
+
+We assume a directed complete partial order with bottom
+($\mathrm{DCPO}_\bot$), $D$, satisfying the following recursive domain
+equation:
+\begin{displaymath}
+  D \cong (D \to D)_\bot \oplus (D \times D)_\bot \oplus D_\bot \oplus D_\bot \oplus 1_\bot
+\end{displaymath}
+where $\oplus$ represents the coalesced sum that identifies the $\bot$
+element of all the components. We are guaranteed to be able to obtain
+such a $D$ by standard results about the category $\mathrm{DCPO}_\bot$
+\cite{smythplotkin}. The five components of the right hand side of
+this equation will be used to carry functions, products, the left and
+right injections for sum types and the unit value
+respectively. Accordingly, we use the following symbols to represent
+the matching continuous injective maps into $D$:
+\begin{center}
+  \begin{tabular}{ll}
+    $\semCons{Lam} : [D \to D] \to D$ & $\semCons{Pair} : D \times D \to D$ \\
+    $\semCons{Inl} : D \to D$ & $\semCons{Inr} : D \to D$ \\
+    $\semCons{Unit} : 1 \to D$
+  \end{tabular}  
+\end{center}
+We will write $\semCons{Unit}$ instead of $\semCons{Unit}\ *$.
+
+% FIXME: brief recap of DCPPO, in particular the fixpoint operator
+
+We assume that the set of all possible identifier names is represented
+by $V$. Environments $\eta$ are modelled as maps from $V$ to elements
+of $D$. These are exactly as one would expect for an untyped
+interpretation of the simply-typed $\lambda$-calculus. It can be
+easily checked that this collection of equations defines a continuous
+function $D^V \to D$, since everything is built from standard parts.
+\begin{eqnarray*}
+  \sem{x}\eta & = & \eta(x) \\
+  \sem{*}\eta & = & \semCons{Unit} \\
+  \sem{\lambda x.\ e}\eta & = & \semCons{Lam}\ (\lambda v.\ \sem{e}(\eta[x \mapsto v])) \\
+  \sem{fe}\eta & = & \left\{
+    \begin{array}{ll}
+      d_f\ (\sem{e}\eta) & \textrm{if}\ \sem{f}\eta = \semCons{Lam}\ d_f \\
+      \bot & \textrm{otherwise}
+    \end{array}
+    \right. \\
+  \sem{(e_1,e_2)}\eta & = & \semCons{Pair}\ (\sem{e_1}\eta, \sem{e_2}\eta) \\
+  \sem{\kw{fst}\ e}\eta & = & \left\{
+    \begin{array}{ll}
+      d_1 & \textrm{if}\ \sem{e}\eta = \semCons{Pair}\ (d_1, d_2) \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right. \\
+  \sem{\kw{snd}\ e}\eta & = & \left\{
+    \begin{array}{ll}
+      d_2 & \textrm{if}\ \sem{e}\eta = \semCons{Pair}\ (d_1, d_2) \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right. \\
+  \sem{\kw{inl}\ e}\eta & = & \semCons{Inl}\ (\sem{e}\eta) \\
+  \sem{\kw{inr}\ e}\eta & = & \semCons{Inr}\ (\sem{e}\eta) \\
+  \left\llbracket
+    \begin{array}{l}
+      \kw{case}\ e\ \kw{of}\\
+      \quad\kw{inl}\ \ident{x}.f;\\
+      \quad\kw{inr}\ \ident{y}.g
+    \end{array}
+  \right\rrbracket\eta & = &
+  \left\{
+    \begin{array}{ll}
+      \sem{f}(\eta[x \mapsto d]) & \textrm{if }\sem{e}\eta = \semCons{Inl}\ d \\
+      \sem{g}(\eta[y \mapsto d]) & \textrm{if }\sem{e}\eta = \semCons{Inr}\ d \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right. \\
+\end{eqnarray*}
+The delay and force operators are just no-ops in this interpretation,
+and applicative apply is just normal function application.
+\begin{eqnarray*}
+  \sem{\kw{delay}\ e}\eta & = & \sem{e}\eta \\
+  \sem{f \circledast e}\eta & = & \left\{
+    \begin{array}{ll}
+      d_f\ (\sem{e}\eta) & \textrm{if}\ \sem{f}\eta = \semCons{Lam}\ d_f \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right. \\
+  \sem{\kw{force}\ e}\eta & = & \sem{e}\eta
+\end{eqnarray*}
+Our interpretation simply translates the fixpoint combinator of the
+calculus as the usual fixpoint operator $\mathrm{fix}\ f = \bigsqcup_n
+f^n(\bot)$ in $\mathrm{DCPO}_\bot$.
+\begin{eqnarray*}
+  \sem{\kw{fix}\ f}\eta & = &
+  \left\{
+    \begin{array}{ll}
+      \mathrm{fix}\ d_f & \textrm{if }\sem{f}\eta = \semCons{Lam}\ d_f \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right.
+\end{eqnarray*}
+
+Finally, we interpret the constructor and primitive recursion
+eliminator for types of the form $\mu X. F[X]$. The interpretation of
+terms of the form $\cons{Cons}\ e$ is straightforward: the constructor
+itself disappears at runtime, so the interpretation simply ignores it:
+\begin{eqnarray*}
+  \sem{\cons{Cons}\ e}\eta & = & \sem{e}\eta
+\end{eqnarray*}
+
+To define the semantic counterpart of the $\elim{primRec}$ operator,
+we first define a higher-order continuous function $\mathrm{primrec} :
+(D \to D \to D) \to (D \to D) \to D$ in the model:
+\begin{displaymath}
+  \begin{array}{l}
+    \mathrm{primrec}\ \mathit{fmap}\ f = \\
+    \quad\quad\semCons{Lam}\ (\mathrm{fix}\ (\lambda g x.\ f\ (\mathit{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x, g\ x))))\ x))
+  \end{array}
+\end{displaymath}
+The first argument to $\mathrm{primrec}$ specifies a functorial
+mapping function that are generated from a syntactic types. For each
+of the syntactic types $\Delta; \Theta \vdash F : \sortType$ defined
+in \autoref{fig:types}, we define a suitable $\mathrm{fmap_F} :
+D^{|\Theta|} \to D \to D$, where $|\Theta|$ is the number of type
+variables in $\Theta$. This definition is presented in
+\autoref{fig:semantic-fmap}.
+
+\begin{figure}[t]
+  \begin{eqnarray*}
+    \mathrm{fmap_X}\ \vec{f}\ x & = & d_f(x)\quad (f_X = \semCons{Lam}\ d_f) \\
+    \mathrm{fmap_1}\ \vec{f}\ x & = & \semCons{Unit} \\
+    \mathrm{fmap_{F \times G}}\ \vec{f}\ (\semCons{Pair}\ (x,y)) & = & \semCons{Pair}\ (\mathrm{fmap_F}\ \vec{f}\ x, \mathrm{fmap_G}\ \vec{f}\ y) \\
+    \mathrm{fmap_{F + G}}\ \vec{f}\ (\semCons{Inl}\ x) & = & \semCons{Inl}\ (\mathrm{fmap_F}\ \vec{f}\ x) \\
+    \mathrm{fmap_{F + G}}\ \vec{f}\ (\semCons{Inr}\ x) & = & \semCons{Inr}\ (\mathrm{fmap_G}\ \vec{f}\ x) \\
+    \mathrm{fmap_{A \to F}}\ \vec{f}\ (\semCons{Lam}\ g) & = & \semCons{Lam}\ (\lambda v. \mathrm{fmap_F}\ \vec{f}\ (g\ v)) \\
+    \mathrm{fmap_{\delay\kappa F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
+    \mathrm{fmap_{\forall\kappa.F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
+    \mathrm{fmap_{\mu X. F}}\ \vec{f}\ x & = &
+    \begin{array}[t]{l}
+      \mathrm{primrec}\ (\mathrm{fmap_F}\ \vec{f})\ \\
+      \quad\quad\quad\quad(\mathrm{fmap}_F\ \vec{f}\ \mathrm{snd})\ x
+    \end{array}
+  \end{eqnarray*}
+  where
+  \begin{displaymath}
+    \mathrm{snd}\ (\semCons{Pair}\ (x,y)) = y
+  \end{displaymath}
+  All unhandled cases are defined to be equal to $\bot$.
+  \caption{Semantic $\mathrm{fmap_F}$ for $\Delta; \Theta \vdash F : \sortType$}
+  \label{fig:semantic-fmap}
+\end{figure}
+
+With these definitions we can define the interpretation of the
+syntactic $\elim{primRec$_F$}$ operator. Note that the syntactic type
+constructor $F$ here always has exactly one free type variable, so
+$\mathrm{fmap_F}$ has type $D \to D \to D$, as required by
+$\mathrm{primrec}$.
+\begin{displaymath}
+  \begin{array}{l}
+    \sem{\elim{primRec$_F$}\ f}\eta = \\
+    \quad\quad\left\{
+      \begin{array}{ll}
+        \mathrm{primrec}\ \mathrm{fmap_F}\ d_f & \textrm{if }\sem{f}\eta = \semCons{Lam}\ d_f \\
+        \bot & \textrm{otherwise}
+      \end{array}
+    \right.
+  \end{array}
+\end{displaymath}
+
+This completes the interpretation of the terms of our programming
+language in our untyped model. We now turn to the semantic meaning of
+types, with the aim of showing, in \autoref{sec:semantic-soundness},
+that each well-typed term's interpretation is semantically well-typed.
+
+\subsection{Clock Environments}\label{sec:clock-envs}
+
+For a clock context $\Delta$, we define $\clkSem{\Delta}$ to be the
+set of clock environments: mappings from the clock variables in
+$\Delta$ to the natural numbers. We use $\delta, \delta'$ etc. to
+range over clock environments. For $\delta$ and $\delta'$ in
+$\clkSem{\Delta}$, we say that $\delta \sqsubseteq \delta'$ (in
+$\clkSem\Delta$) if for all $\kappa \in \Delta$, $\delta(\kappa) \leq
+\delta'(\kappa)$. The intended interpretation of some $\delta \in
+\clkSem\Delta$ is that $\delta$ maps each clock $\kappa$ in $\Delta$
+to a natural number stating how much time that clock has left to
+run. The ordering $\delta \sqsubseteq \delta'$ indicates that the
+clocks in $\delta$ have at most as much time left as the clocks in
+$\delta'$.
+% FIXME: syntax for clock environment updates
+
+\subsection{Semantic Types}\label{sec:semantic-types}
+
+We semantically interpret types as $\clkSem\Delta$-indexed families of
+partial equivalence relations (PERs) over the semantic domain
+$D$. Recall that a PER on $D$ is a binary relation on $D$ that is
+symmetric and transitive, but not necessarily reflexive. Since PERs
+are binary relations, we will treat them as special subsets of the
+cartesian product $D \times D$. We write $\PER(D)$ for the set of all
+partial equivalence relations on $D$, and $\top_D$ for the PER $D
+\times D$. 
+% We are only interested in PERs that are upwards closed
+% with respect to the partial order on $D$. Upwards closure ensures that
+% if a type includes the initial segment of an infinite value, then it
+% includes the remainder of that value. 
+We require that our $\clkSem\Delta$-indexed families of PERs
+contravariantly respect the partial ordering on elements of
+$\clkSem\Delta$. This ensures that, as the time left to run on clocks
+increases, the semantic type becomes ever more precise. Thus when we
+interpret universal clock quantification as intersection over all
+approximations (see below), we capture the common core of all the
+approximations we have made. Formally, a semantic type for a clock
+context $\Delta$ is a function $A : \clkSem\Delta \to \PER(D)$,
+satisfying contravariant Kripke monotonicity: for all $\delta'
+\sqsubseteq \delta$, $A\delta \subseteq A\delta'$.
+
+We write $\ClkPER(\Delta)$ for the collection of all semantic types
+for the clock context $\Delta$. Below, we will also consider morphisms
+between semantic types, and so turn $\ClkPER(\Delta)$ into a
+category. %FIXME: reference to the actual section
+
+% FIXME: maybe say that we definitely do not want relations to be
+% admissible
+
+\paragraph{Unit, Product, Coproduct and Function Types}
+
+To interpret the types of our programming language, we must give
+semantic counterparts to each of the syntactic type constructors we
+have used. The basic constructions for unit, product and coproduct
+types are straightforward. The unit type will be interpreted by a
+constant familiy of PERs:
+\begin{displaymath}
+  1\delta = \{(\semCons{Unit}, \semCons{Unit})\}
+\end{displaymath}
+This clearly satisfies the conditions for being a semantic type.
+
+Given semantic types $A$ and $B$, their product is defined to be
+\begin{displaymath}
+  (A \times B)\delta =
+  \left\{
+    \begin{array}{l}
+      (\semCons{Pair}(x,y),\semCons{Pair}(x',y')) \\
+      \quad\quad\sepbar (x,x') \in \sem{A}\delta \land (y,y') \in \sem{B}\delta 
+    \end{array}
+  \right\}
+\end{displaymath}
+and their coproduct is
+\begin{displaymath}
+  (A + B)\delta =
+  \begin{array}{l}
+    \{ (\semCons{Inl}(x), \semCons{Inl}(x')) \mathrel| (x,x') \in \sem{A}\delta \} \\
+    \quad \cup \\
+    \{ (\semCons{Inr}(y),\semCons{Inr}(y')) \mathrel| (y,y') \in \sem{B}\delta \}
+  \end{array}
+\end{displaymath}
+Since $A$ and $B$ are assumed to be semantic types, it immediately
+follows that $A \times B$ and $A + B$ are semantic types.
+
+To interpret function types, we make use of the typical definition for
+Kripke-indexed logical relations, by quantifing over all smaller clock
+environments. Given semantic types $A$ and $B$, we define:
+\begin{displaymath}
+  (A \to B)\delta = \left\{
+    \begin{array}{l}
+      (\semCons{Lam}(f),\semCons{Lam}(f')) \\
+      \quad \sepbar \forall \delta' \sqsubseteq \delta, (x,x') \in A\delta'.\ (fx,f'x') \in B\delta'
+    \end{array}
+  \right\}
+\end{displaymath}
+It follows by the standard argument for Kripke logical relations that
+this family of PERs is contravariant in clock environments.
+
+% We also
+% need to show that if $(\semCons{Lam}(f_1),\semCons{f_2}) \in (A \to
+% B)\delta$, and $f_1 \sqsubseteq f'_1$ and $f_2 \sqsubseteq f'_2$, then
+% $(\semCons{Lam}(f'_1),\semCons{f'_2}) \in (A \to B)\delta$. This
+% follows because, for all $\delta' \sqsubseteq \delta$ and $(x_1,x_2)
+% \in A\delta'$ such that $(f_1x_1,f_2x_2) \in B\delta'$, we have
+% $f_1x_1 \sqsubseteq f'_1x_1$ and $f_2x_2 \sqsubseteq f'_2x_2$ by the
+% definition of order on elements of $D \to D$. Since $B$ is a semantic
+% type, and so upwards closed, we now know that $(f'_1x_1,f'_2x_2) \in
+% B\delta'$. Thus $(\semCons{Lam}(f'_1),\semCons{Lam}(f'_2)) \in (A \to
+% B)\delta$, as required.
+
+\paragraph{Guarded Types} Given a semantic type $A$, we define the
+semantic delay operation $\delay\kappa$ as follows, where $\kappa$ is
+a member of the clock context $\Delta$:
+\begin{displaymath}
+  (\delay\kappa A)\delta = \left\{
+    \begin{array}{ll}
+      \top_D & \textrm{if }\delta(\kappa) = 0 \\
+      A(\delta[\kappa \mapsto n]) & \textrm{if }\delta(\kappa) = n + 1
+    \end{array}
+  \right.
+\end{displaymath}
+Thus, the semantic type operator $\delay\kappa$ acts differently
+depending on the time remaining on the clock $\kappa$ in the current
+clock environment $\delta$. When the clock has run to zero,
+$\delay\kappa A$ becomes completely uninformative, equating all pairs
+of elements in the semantic domain $D$. If there is time remaining,
+then $\delay\kappa A$ equates a pair iff $A$ would with one fewer
+steps remaining. 
+% For upwards-closure, there are two cases: if
+% $\delta(\kappa) = 0$ then $D$ is trivially upwards-closed; if
+% $\delta(\kappa) = n + 1$, then upwards closure follows from the
+% upwards closure of $A$. 
+For Kripke monotonicity, we want to prove that
+$(d,d') \in (\delay\kappa A)\delta$ implies $(d,d') \in (\delay\kappa
+A)\delta'$ when $\delta' \sqsubseteq \delta$. If $\delta'(\kappa) = 0$
+then $(\delay\kappa A)\delta' = D \times D \ni (d,d')$. If
+$\delta'(\kappa) = n' + 1$ then $\delta(\kappa) = n + 1$ with $n' \leq
+n$. So $(d,d') \in A(\delta[\kappa \mapsto n])$, and so by the Kripke
+monotonicity for $A$, $(d,d') \in A(\delta'[\kappa \mapsto n']) =
+(\delay\kappa A)\delta'$.
+
+\paragraph{Clock Quantification}
+The semantic counterpart of clock quantification takes us from
+semantic types in $\ClkPER(\Delta, \kappa)$ to semantic types in
+$\ClkPER(\Delta)$. Given a semantic type $A$ in $\ClkPER(\Delta,
+\kappa)$, we define
+\begin{displaymath}
+  \forall_\kappa A = \bigcap_{n \in \mathbb{N}} A(\delta[\kappa \mapsto n])
+\end{displaymath}
+% For upwards closure, $(d_1,d_2) \in (\forall_\kappa. A)\delta$ implies
+% that $(d_1,d_2) \in A(\delta[\kappa \mapsto n])$ for all $n$. If $d_1
+% \sqsubseteq d'_1$ and $d_2 \sqsubseteq d'_2$, then since $A$ is a
+% semantic type, we know that $(d'_1,d'_2) \in A(\delta[\kappa \mapsto
+% n])$ for all $n$. Thus $(d'_1,d'_2) \in (\forall_\kappa. A)\delta$, as
+% required.
+For Kripke monotonicity, if $(d,d') \in
+(\forall\kappa. A)\delta$ then $\forall n.\ (d,d') \in A(\delta[\kappa
+\mapsto n])$. Since $A$ is a semantic type, $\forall n.\ (d,d') \in
+A(\delta'[\kappa \mapsto n])$, hence $(d,d') \in
+(\forall\kappa. A)\delta'$.
+
+\paragraph{Complete Lattice Structure} In order to define the semantic
+counterpart of the least fixpoint type operator, we make use of the
+lattice structure of $\ClkPER(\Delta)$. Given $A, B \in
+\ClkPER(\Delta)$, we define a partial order: $A \subseteq B$ if
+$\forall \delta. A\delta \subseteq B\delta$. It is easy to see that
+$\ClkPER(\Delta)$ is closed under arbitrary intersections, and so is a
+complete lattice.
+
+Each of the semantic type constructors above is monotonic with respect
+to the partial order on $\ClkPER(\Delta)$ (with the obvious proviso
+that $A \to B$ is only monotonic in its second argument).
+
+\paragraph{Least Fixpoint Types}
+We make use of the Knaster-Tarski theorem \cite{tarski55lattice} to
+produce the least fixpoint of a monotone function on
+$\ClkPER(\Delta)$. See Loader \cite{loader97equational} for an similar
+usage in a setting without guarded recursion. Given a monotone
+function $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$, we define:
+\begin{displaymath}
+  (\mu F) = \bigcap \{ A \in \ClkPER(\Delta) \sepbar FA \subseteq A \}
+\end{displaymath}
+For any monotone $F$, $\mu F$ is immediately a semantic type by
+construction, since semantic types are closed under intersection. As
+an initial step towards semantic type soundness for our calculus, we
+demonstrate a semantic well-typedness result for the
+$\mathrm{primrec}$ functon we defined in
+\autoref{sec:semantics-of-programs}.
+
+\begin{lemma}\label{lem:primrec-well-typed}
+  Let $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$ be a monotone
+  function.  Let $\mathrm{fmap} : D \to D \to D$ be such that:
+  \begin{enumerate}
+  \item For all $\delta \in \sem{\Delta}$, for all $A,B \in
+    \ClkPER(\Delta)$, and for all $(g,g') \in (A \to B)\delta$ and
+    $(x,x') \in FA\delta$, we have $(\mathrm{fmap}\ g\ x,
+    \mathrm{fmap}\ g'\ x') \in FB\delta$.
+  \end{enumerate}
+  Then, for all $\delta \in \sem{\Delta}$ and for all $(f,f') \in
+  (F(\mu F \times C) \to C)\delta$, where $C$ is a semantic type, we
+  have
+  \begin{displaymath}
+    (\mathrm{primrec}\ \mathrm{fmap}\ f, \mathrm{primrec}\ \mathrm{fmap}\ f') \in (\mu F \to C)\delta
+  \end{displaymath}
+\end{lemma}
+
+\begin{proof}
+  We apply the Knaster-Tarski theorem to do induction on the least
+  fixpoint $\mu F = F(\mu F)$.
+
+  Let $h = \mathrm{fix}\ (\lambda g x. f\ (\mathrm{fmap}\
+  (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x, g\ x)))))$ and $h =
+  \mathrm{fix}\ (\lambda g x. f\ (\mathrm{fmap}\ (\semCons{Lam}\
+  (\lambda x. \semCons{Pair}\ (x, g\ x)))))$, so that
+  $\mathrm{primrec}\ \mathrm{fmap}\ f = \semCons{Lam}\ h$ and likewise
+  for $h'$. By the definition of the semantic function type
+  constructor it suffices to show that for all $(x,x') \in \mu F
+  \delta$, $(h x, h' x') \in C\delta$. Let $P \in \ClkPER(\Delta)$ be
+  defined as:
+  \begin{displaymath}
+    P\delta = \{ (x,x') \in (\mu F)\delta \sepbar (h x, h' x') \in C\delta \},
+  \end{displaymath}
+  If we can show that $P = \mu F$ then the lemma is proved. We first
+  need to check that $P$ is actually a semantic type, which follows
+  from the facts that $\mu F$ and $C$ are semantic types, and the
+  continuity of $h$ and $h'$. To apply the Knaster-Tarski theorem to
+  show that $P = \mu F$ we must show that $FP \subseteq P$. So for any
+  $(y,y') \in FP\delta$, we must show that $(h y, h' y') \in
+  C\delta$. By unfolding the applications of $\mathrm{fix}$ in the
+  definitions of $h$ and $h'$ this amounts to showing that
+  \begin{displaymath}
+    \left(
+      \begin{array}{l}
+        f\ (\mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h\ x)))\ y),\\
+        f'\ (\mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h'\ x)))\ y')
+      \end{array}
+    \right)\in C\delta
+  \end{displaymath}
+  By the assumption that $(f,f') \in (F(\mu F \times C) \to C)\delta$
+  it suffices to show that
+  \begin{equation}
+    \label{eq:primrec-welltyped-1}
+    \left(
+      \begin{array}{l}
+        \mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h\ x)))\ y,\\
+        \mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h'\ x)))\ y'
+      \end{array}
+    \right)\in F(\mu F \times C)\delta
+  \end{equation}
+  Now, since $(\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h\ x)),
+  \semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h'\ x))) \in (P \to
+  \mu F \times C)\delta$, we can use the assumption on $\mathrm{fmap}$
+  to show \autoref{eq:primrec-welltyped-1}, and we are done.
+\end{proof}
+
+\subsection{Interpretation of Syntactic Types}\label{sec:type-interp}
+
+\begin{figure}[t]
+  \centering
+  \begin{eqnarray*}
+    \tySem{1}\theta & = & 1 \\
+    \tySem{X}\theta & = & \theta_X \\
+    \tySem{A \times B}\theta & = & \tySem{A}\theta \times \tySem{B}\theta \\
+    \tySem{A + B}\theta & = & \tySem{A}\theta + \tySem{B}\theta \\
+    \tySem{A \to B}\theta & = & \tySem{A}\emptyset \to \tySem{B}\theta \\
+    \tySem{\delay\kappa A}\theta & = & \delay\kappa (\tySem{A}\theta) \\
+    \tySem{\forall \kappa. A}\theta & = & \forall_\kappa (\tySem{A}(\theta\mathord\uparrow_\kappa)) \\
+    \tySem{\mu X. F}\theta & = & \mu (\lambda X. \tySem{F}(\theta, X))
+  \end{eqnarray*}
+  \caption{Interpretation of well-formed types}
+  \label{fig:type-interp}
+\end{figure}
+
+An open type $\Delta; \Theta \vdash A : \sortType$ is interpreted as
+monotonic function $\tySem{A} : \ClkPER(\Delta)^{|\Theta|} \to
+\ClkPER(\Delta)$, where $|\Theta|$ denotes the number of type
+variables in $\Theta$. The interpretation is defined in the clauses in
+\autoref{fig:type-interp}. These clauses make use of the constructions
+of semantic types defined in the previous subsection. In the clause
+for $\forall \kappa$, we make use of the ``clock weakening'' operator
+$-\mathord\uparrow_\kappa$ which takes a collection of semantic types
+in $\ClkPER(\Delta)^{|\Theta|}$ to semantic types in
+$\ClkPER(\Delta,\kappa)^{|\Theta|}$ by pointwise restriction of clock
+environments in $\sem{\Delta, \kappa}$ to clock environments in
+$\sem{\Delta}$.
+
+\begin{lemma}\label{lem:substitution-lemma}
+  Assume that $\Delta; \Theta \vdash A : \sortType$, $\kappa, \kappa'
+  \in \Delta$ and $\kappa' \not\in \mathit{fv}(A)$. Then for all
+  $\delta \in \sem{\Delta[\kappa\mapsto\kappa']}$ and $\theta \in
+  \ClkPER(\Delta)^{|\Theta|}$,
+  \begin{displaymath}
+    \sem{A}\theta (\delta[\kappa \mapsto \delta(\kappa')]) = \sem{A[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])\delta.
+  \end{displaymath}
+\end{lemma}
+
+\begin{proof}
+  By induction on the structure of $A$.
+
+  When $A = \delay{\kappa''}A'$, we have two cases depending on
+  whether $\kappa'' = \kappa$ or not. If $\kappa'' = \kappa$, then
+  $A[\kappa \mapsto \kappa'] = (\delay\kappa A')[\kappa \mapsto
+  \kappa'] = \delay{\kappa'} (A[\kappa \mapsto \kappa'])$. The LHS of
+  the equation to prove is:
+  \begin{displaymath}
+    \begin{array}{cl}
+      & \sem{A}\theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =& \sem{\delay{\kappa}A'} \theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =& \left\{
+        \begin{array}{ll}
+          \sem{A'}\theta(\delta[\kappa \mapsto n]) & \textrm{if }\delta(\kappa') = n + 1 \\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  While the RHS of the equation is:
+  \begin{displaymath}
+    \begin{array}{cl}
+      & \sem{A[\kappa \mapsto \kappa']}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\sem{\delay{\kappa'}(A'[\kappa\mapsto\kappa'])}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\left\{
+        \begin{array}{ll}
+          \sem{A'[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])(\delta[\kappa' \mapsto n]) & \textrm{if }\delta(\kappa') = n + 1 \\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  Thus if $\delta(\kappa') = 0$, then we are done. If $\delta(\kappa')
+  = n + 1$ we have $\sem{A'}\theta(\delta[\kappa\mapsto n]) =
+  \sem{A'}\theta(\delta[\kappa'\mapsto n][\kappa \mapsto
+  \delta(\kappa')])$, since $\kappa' \not\in \mathit{fv}(A)$, which is
+  equal to
+  $\sem{A'[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])(\delta[\kappa'\mapsto
+  n])$ by the induction hypothesis, as required.
+
+  If $\kappa'' \not\in \kappa$, then we have $A[\kappa \mapsto
+  \kappa'] = (\delay{\kappa''} A')[\kappa \mapsto \kappa'] =
+  \delay{\kappa''} (A'[\kappa \mapsto \kappa'])$. The LHS of the
+  equation to prove is:
+  \begin{displaymath}
+    \begin{array}{cl}
+      & \sem{A}\theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =& \sem{\delta{\kappa''}A'} \theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =&\left\{
+        \begin{array}{ll}
+          \sem{A'}\theta(\delta[\kappa'' \mapsto n, \kappa \mapsto \delta(\kappa')]) & \textrm{if }\delta(\kappa'') = n + 1 \\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  While the RHS of the equation is:
+  \begin{displaymath}
+    \begin{array}{@{}c@{\hspace{0.3em}}l}
+      & \sem{A[\kappa \mapsto \kappa']}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\sem{\delay{\kappa''}(A'[\kappa\mapsto\kappa'])}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\left\{
+        \begin{array}{ll}
+          \sem{A'[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])(\delta[\kappa'' \mapsto n]) & \textrm{if }\delta(\kappa'') = n + 1\\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  The required equation now follows directly from the induction
+  hypothesis.
+
+  FIXME: write out the rest of the cases.
+\end{proof}
+
+\begin{lemma}\label{lem:type-equality}
+  If $\Delta; \Theta \vdash A \equiv B$ then for all $\theta \in
+  \ClkPER(\Delta)^{|\Theta|}$, $\sem{A}\theta = \sem{B}\theta$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the derivation of $\Delta \vdash A \equiv
+  B$. Reflexivity, symmetry, transitivity and congruence are all
+  trivial. 
+
+  When the equation is $\forall \kappa. A \equiv A$: we have $(d,d')
+  \in \sem{\forall \kappa. A}\delta$ iff $\forall n. (d,d') \in
+  \sem{A}(\delta[\kappa\mapsto n])$ iff (since $\kappa \not\in
+  \mathit{fv}(A)$) $(d,d') \in \sem{A}\delta$.  
+
+  When the equation is $\forall \kappa. A + B \equiv (\forall
+  \kappa. A) + (\forall \kappa. B)$: If $(d,d') \in \sem{\forall
+    \kappa. A + B}\delta$ then $(d,d') \in \sem{A + B}(\delta[\kappa
+  \mapsto n])$ for all $n$. By case analysis on $d$ and $d'$, either
+  $d = \mathsf{Inl}\ x$, $d' = \mathsf{Inr}\ x'$ and $(x,x') \in
+  \sem{A}(\delta[\kappa \mapsto n])$ for all $n$, or $d =
+  \mathsf{Inr}\ y$, $d' = \mathsf{Inr}\ y'$ and $(y,y') \in
+  \sem{B}(\delta[\kappa\mapsto n])$ for all $n$. In either case we are
+  done. The opposite direction is similar.
+
+  When the equation is $\forall \kappa. A \times B \equiv (\forall
+  \kappa. A) \times (\forall \kappa. B)$: $(d,d') \in \sem{\forall
+    \kappa. A \times B}\delta$ iff $(d,d') \in \sem{A \times
+    B}(\delta[\kappa \mapsto n])$ for all $n$. This is exactly when $d
+  = \mathsf{Pair}(x,y)$, $d' = \mathsf{Pair}(x',y')$ and $\forall n.\
+  (x,x') \in \sem{A}(\delta[\kappa \mapsto n])$ and $\forall n.\
+  (y,y') \in \sem{A}(\delta[\kappa \mapsto n])$, as required.
+
+  When the equation is $\forall \kappa. A \to B \equiv A \to \forall
+  \kappa. B$: if $(d,d') \in \sem{\forall \kappa.A \to B}\delta$ then
+  $d = \mathsf{Lam}\ f$ and $d' = \mathsf{Lam}\ f'$, for some $f$,$f'$
+  such that $\forall n. \forall \delta' \sqsubseteq \delta[\kappa
+  \mapsto n], (x,x') \in \sem{A}\delta'. (f(x),f'(x')) \in
+  \sem{B}\delta'$. Given $\delta'' \sqsubseteq \delta$ and $(x,x') \in
+  \sem{A}\delta''$ then for all $n$, $(x,x') \in
+  \sem{A}(\delta''[\kappa \mapsto n])$ (since $\kappa \not\in
+  \mathit{fv}(A)$), and $\delta''[\kappa \mapsto n] = \delta[\kappa
+  \mapsto n]$. Therefore $(f(x),f'(x')) \in \sem{B}(\delta''[\kappa
+  \mapsto n])$, and so $(d,d') = (\mathsf{Lam}\ f, \mathsf{Lam}\ f')
+  \in \sem{A \to \forall \kappa. B}\delta$. In the opposite direction,
+  if $(d,d') = (\mathsf{Lam}\ f, \mathsf{Lam}\ f') \in \sem{A \to
+    \forall \kappa.B}\delta$ then $\forall \delta' \sqsubseteq \delta,
+  (x,x') \in \sem{A}\delta'.\ \forall n. (f(x),f'(x')) \in
+  \sem{B}(\delta'[\kappa \mapsto n])$. Given $n$, $\delta''
+  \sqsubseteq \delta[\kappa \mapsto n]$ and $(x,x') \in
+  \sem{A}\delta''$, then there exists a $\delta'$ and $n' \leq n$ with
+  $\delta'' = \delta'[\kappa \mapsto n'$. Since $\kappa \not\in
+  \mathit{fv}(A)$, $(x,x') \in \sem{A}\delta'$, and $(f(x),f'(x')) \in
+  \sem{B}(\delta'[\kappa \mapsto n']) = \sem{B}\delta''$, as
+  required.
+
+  When the equation is $\forall \kappa. \forall \kappa'. A \equiv
+  \forall \kappa'. \forall \kappa. A$: $(d,d') \in
+  \sem{A}(\delta[\kappa \mapsto n, \kappa' \mapsto n'])$ for all
+  $n,n'$ if and only if $(d,d') \in \sem{A}(\delta[\kappa' \mapsto n',
+  \kappa \mapsto n])$ for all $n',n$. This is just trivial interchange
+  of universal quantification.
+
+  FIXME: write up the last two equations.
+\end{proof}
+
+The next lemma ensures that we may use the semantic $\mathrm{fmap_F}$
+functions defined in \autoref{fig:semantic-fmap} with the
+$\mathrm{primrec}$ operator, by showing that each of $\mathrm{fmap_F}$
+satisfies the requirements of \lemref{lem:primrec-well-typed}.
+
+\begin{lemma}\label{lem:sem-fmap-well-typed}
+  For all $\Delta; \Theta \vdash F : \sortType$, the $\mathrm{fmap}_F$
+  defined in \autoref{fig:semantic-fmap} are all semantically
+  well-typed: For all $\delta \in \sem{\Delta}$, for all $\vec{A,B}
+  \in \ClkPER(\Delta)$, and for all $\vec{(g,g') \in (A \to B)\delta}$
+  and $(x,x') \in FA\delta$, we have $(\mathrm{fmap_F}\ \vec{g}\ x,
+  \mathrm{fmap_F}\ \vec{g'}\ x') \in FB\delta$.
+\end{lemma}
+
+\begin{proof}
+  By induction on the derivation of $\Delta; \Theta \vdash F :
+  \sortType$. The verifications are very similar to the verifications
+  required for \thmref{thm:semantic-soundness} below, so we omit them.
+\end{proof}
+
+\subsection{Semantic Type Soundness}\label{sec:semantic-soundness}
+
+We now show our first main result: the semantic type soundness
+property of our system. To state this result, we must define a
+semantic interpretation of contexts as a clock-environment indexed
+collection of PERs over mappings from variable names in $V$ to
+semantic domain elements in $D$:
+\begin{displaymath}
+  \begin{array}{l}
+    \sem{\Gamma}\delta =\\
+    \quad\{(\eta, \eta') \in D^V \times D^V \mathrel| \forall (\ident{x} : A) \in \Gamma.\ (\eta(\ident{x}), \eta'(\ident{x})) \in \sem{A}\delta \}  
+  \end{array}
+\end{displaymath}
+
+\begin{theorem}\label{thm:semantic-soundness}
+  If $\Delta; \Gamma \vdash e : A$, then for all $\delta \in
+  \sem{\Delta}$ and $(\eta,\eta') \in \sem{\Gamma}\delta$,
+  $(\sem{e}\eta,\sem{e}\eta') \in \sem{A}\delta$.
+\end{theorem}
+
+\begin{proof}
+  By induction on the derivation of $\Delta; \Gamma \vdash e : A$. For
+  \TirName{Var}, by assumption $(\eta(\ident{x}),\eta'(\ident{x})) \in
+  \sem{A}\delta$ so we are done.
+
+  For \TirName{Unit}, from the interpretation of terms, we know that
+  for all $\eta$ and $\eta'$, $(\sem{*}\eta, \sem{*}\eta') =
+  (\semCons{Unit}, \semCons{Unit}) \in \sem{1}\delta$.
+
+  For \TirName{Abs}, by the induction hypothesis, we know that for all
+  $\delta \in \sem{\Delta}$, $(\eta,\eta') \in \sem{\Gamma}\delta$ and
+  $(v,v') \in \sem{A}\delta$, $(\sem{e}(\eta[\ident{x} \mapsto v]),
+  \sem{e}(\eta[\ident{x} \mapsto v']) \in \sem{B}\delta$. So for any
+  $\delta \in \sem{\Delta}$, we need to prove that $(\eta,\eta') \in
+  \sem{\Gamma}\delta$ implies that $(\semCons{Lam}\ (\lambda v.\
+  \sem{e}(\eta[\ident{x} \mapsto v])), \semCons{Lam}\ (\lambda v.\
+  \sem{e}(\eta'[\ident{x} \mapsto v]))) \in \sem{A \to
+    B}\delta$. Given $\delta' \sqsubseteq \delta$ and $(v,v') \in
+  \sem{A}\delta'$, we also know that $(\eta,\eta') \in
+  \sem{\Gamma}\delta'$ by Kripke monotonicity, so we can apply the
+  inductive hypothesis to show that $(\sem{e}(\eta[\ident{x} \mapsto
+  v]), \sem{e}(\eta'[\ident{x} \mapsto v'])) = ((\lambda
+  v. \sem{e}(\eta[\ident{x} \mapsto v]))v, (\lambda v.\
+  \sem{e}(\eta'[\ident{x} \mapsto v]))v') \in \sem{B}\delta'$, as
+  required.
+
+  For \TirName{App}, by the induction hypothesis we know that for all
+  $\delta \in \sem{\Delta}$, and $(\eta, \eta') \in
+  \sem{\Gamma}\delta$, $(\sem{f}\eta, \sem{f}\eta') \in \sem{A \to
+    B}\delta$ and $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A}\delta$. Thus we can conclude that there exist $d_f, d'_f$
+  such that $\sem{f}\eta = \semCons{Lam}\ d_f$ and $\sem{f}\eta' =
+  \semCons{Lam}\ d'_f$ and $(d_f(\sem{e}\eta), d'_f(\sem{e}\eta')) \in
+  \sem{B}\delta$, as required.
+
+  For \TirName{Pair}, the induction hypothesis says that
+  $(\sem{e_1}\eta, \sem{e_1}\eta') \in \sem{A}\delta$ and
+  $(\sem{e_2}\eta, \sem{e_2}\eta') \in \sem{B}\delta$, so we can conclude
+  that $(\semCons{Pair}(\sem{e_1}\eta, \sem{e_2}\eta),
+  \semCons{Pair}(\sem{e_1}\eta', \sem{e_2}\eta')) \in \sem{A \times
+    B}\delta$.
+
+  For \TirName{Fst} and \TirName{Snd}, by the induction hypothesis, we
+  know that $(\sem{e}\eta, \sem{e}\eta') \in \sem{A \times B}\delta$,
+  therefore there exist $d_1,d_2,d'_1,d'_2$ such that $\sem{e}\eta =
+  \semCons{Pair}(d_1, d_2)$, $\sem{e}\eta' =
+  \semCons{Pair}(d'_1,d'_2)$ and $(d_1,d'_1) \in \sem{A}\delta$ and
+  $(d_2,d'_2) \in \sem{B}\delta$. Thus in both cases we are done.
+
+  For \TirName{Inl}, the induction hypothesis says that $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{A}\delta$, so it follows immediately that
+  $(\sem{\kw{inl}\ e}\eta, \sem{\kw{inr}\ e}\eta') = (\semCons{Inl}\
+  (\sem{e}\eta), \semCons{Inr}\ (\sem{e}\eta')) \in \sem{A +
+    B}\delta$. The \TirName{Inr} case is similar.
+
+  For \TirName{Case}, by the induction hypothesis, we know that
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{A + B}\delta$. So either there
+  are $(d,d') \in \sem{A}\delta$ such that $\sem{e}\eta =
+  \semCons{Inl}\ d$ and $\sem{e}\eta' = \semCons{Inl}\ d'$ or there
+  are $(d,d') \in \sem{B}\delta$ such that $\sem{e}\eta =
+  \semCons{Inr}\ d$ and $\sem{e}\eta' = \semCons{Inr}\ d'$. In the
+  first case, by the induction hypothesis, we know that
+  $(\sem{f}(\eta[\ident{x} \mapsto d]), \sem{f}(\eta'[\ident{x}
+  \mapsto d'])) \in \sem{C}\delta$, as required. The $\mathsf{Inr}$
+  case is similar.
+
+  For \TirName{DePure}, we know that $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A}\delta$. Since $\sem{A}\delta \subseteq \sem{\delay\kappa
+    A}\delta$ by Kripke monotonicity and the definition of the
+  semantic type operator $\delay\kappa-$, we have that
+  $(\sem{\kw{pure}\ e}\eta, \sem{\kw{pure}\ e}\eta') \in
+  \sem{\delay\kappa A}\delta$.
+
+  For \TirName{DeApp}, we know that $(\sem{f}\eta,\sem{f}\eta') \in
+  \sem{\delay\kappa(A \to B)}\delta$ and $(\sem{a}\eta,\sem{a}\eta')
+  \in \sem{\delay\kappa A}\delta$. If $\delta(\kappa) = 0$ then it
+  doesn't matter what $\sem{f}\eta$ or $\sem{f}\eta'$ are, since
+  $\sem{\delay\kappa B}(\delta[\kappa\mapsto 0]) = \top_D$. If
+  $\delta(\kappa) = n + 1$, then $(\sem{f}\eta, \sem{f}\eta') \in
+  \sem{A \to B}(\delta[\kappa \mapsto n])$ and $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{A}(\delta[\kappa \mapsto n])$. Then, by the
+  same argument above for the \TirName{App} case, $(\sem{f \circledast
+    e}\eta, \sem{f \circledast e}\eta') \in \sem{A}(\delta[\kappa
+  \mapsto n]) = \sem{\delay\kappa A}\delta$, as required.
+
+  For \TirName{$\kappa$-Abs}, we know that for all $\delta \in
+  \sem{\Delta, \kappa}$ and $(\eta,\eta') \in \sem{\Gamma}\delta$,
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{A}\delta$. So if we are given
+  $\delta' \in \sem{\Delta}$, and $(\eta, \eta') \in
+  \sem{\Gamma}\delta'$, then for all $n \in \mathbb{N}$,
+  $\delta'[\kappa \mapsto n] \in \sem{\Delta, \kappa}$, and
+  $(\eta,\eta') \in \sem{\Gamma}(\delta'[\kappa \mapsto n])$ (since
+  $\kappa \not\in \mathit{fv}(\Gamma)$) and therefore $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{A}(\delta[\kappa \mapsto n])$. So
+  $(\sem{\Lambda \kappa. e}\eta, \sem{\Lambda \kappa. e}\eta') =
+  (\sem{e}\eta, \sem{e}\eta') \in \sem{\forall \kappa.A}\delta$, as
+  required.
+
+  For \TirName{$\kappa$-App}, we know that for all $n \in \mathbb{N}$,
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{A}(\delta[\kappa \mapsto n])$,
+  so certainly $(\sem{e}\eta, \sem{e}\eta') \in \sem{A}(\delta[\kappa
+  \mapsto \delta(\kappa')])$. Hence, by
+  \lemref{lem:substitution-lemma}, $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A[\kappa\mapsto\kappa']}\delta$, as required.
+
+  For \TirName{TyEq}, we know that $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A}\delta$, but by \lemref{lem:type-equality}, $\Delta \vdash A
+  \equiv B$ implies that $\sem{A}\delta = \sem{B}\delta$, so
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{B}\delta$, as required.
+
+  For \TirName{Fix}, we need to show that if $(\semCons{Lam}\ f,
+  \semCons{Lam}\ f') \in \sem{\delay\kappa A \to A}\delta$, then
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{A}\delta$. Let $m =
+  \delta(\kappa)$. We know that for all $n \leq m$, $(x,x') \in
+  \sem{\delay\kappa A}(\delta[\kappa \mapsto n])$ implies $(f(x),
+  f'(x')) \in \sem{A}(\delta[\kappa \mapsto n])$. We show that
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa
+  \mapsto n])$ for all $n \leq m$ by induction on $n$, which implies
+  our desired result. When $n = 0$, we know that $(\mathrm{fix}\ f,
+  \mathrm{fix}\ f') \in \top_D = \sem{\delay\kappa A}(\delta[\kappa
+  \mapsto 0])$, so $(f\ (\mathrm{fix}\ f), f'\ (\mathrm{fix}\ f')) \in
+  \sem{A}(\delta[\kappa \mapsto 0])$. Since $f\ (\mathrm{fix}\ f) =
+  \mathrm{fix}\ f$, and likewise for $f'$, we have $(\mathrm{fix}\ f,
+  \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa \mapsto 0])$, as
+  required. When $n = n' + 1$ (and $n \leq m$), we know that
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa
+  \mapsto n'])$ by the induction hypothesis, which implies that
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{\delay\kappa
+    A}(\delta[\kappa \mapsto n])$. Thus $(f\ (\mathrm{fix}\ f), f'\
+  (\mathrm{fix}\ f')) \in \sem{A}(\delta[\kappa \mapsto n]$, by the
+  fact that $f$ and $f'$ are related. Hence $(\mathrm{fix}\ f,
+  \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa \mapsto n])$, as
+  required.
+
+  For \TirName{Force}, we know that for all $\delta \in \sem{\Delta}$
+  and $(\eta,\eta') \in \sem{\Gamma}\delta$, $\forall n.\
+  (\sem{e}\eta,\sem{e}\eta') \in \sem{\delay\kappa A}(\delta[\kappa
+  \mapsto n])$. So for any $n$, $(\sem{e}\eta,\sem{e}\eta') \in
+  \sem{A}(\delta[\kappa \mapsto n])$ since $\sem{\delay\kappa
+    A}(\delta[\kappa\mapsto n+1]) = \sem{A}(\delta[\kappa\mapsto
+  n])$. Hence $(\sem{\kw{force}\ e}\eta, \sem{\kw{force}\ e}\eta') \in
+  \sem{\forall \kappa. A}\delta$.
+
+  For \TirName{Cons}, we use the fact that $\mu F = F(\mu F)$, since
+  it is a fixpoint. By the induction hypothesis we have $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{F[\mu X. F]}\delta$. Since $\sem{F[\mu X. F]}
+  = \sem{F}(\mu \sem{F}) = \mu \sem{F} = \sem{\mu X. F}$, and
+  $(\sem{\cons{Cons}\ e}\eta, \sem{\cons{Cons}\ e}\eta') =
+  (\sem{e}\eta, \sem{e}\eta')$, we are done. For \TirName{PrimRec}, we
+  use \lemref{lem:primrec-well-typed} and
+  \lemref{lem:sem-fmap-well-typed}.
+\end{proof}
+
+%%% Local Variables:
+%%% TeX-master: "paper"
+%%% End:
