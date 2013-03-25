@@ -1,0 +1,353 @@
+\section{Appendix}
+\label{sec:appendix}
+
+\lemref{lem:primrec-well-typed}:
+
+\begin{proof}
+  We apply the Knaster-Tarski theorem to do induction on the least
+  fixpoint $\mu F = F(\mu F)$.
+
+  Let $h = \mathrm{fix}\ (\lambda g x. f\ (\mathrm{fmap}\
+  (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x, g\ x)))))$ and $h =
+  \mathrm{fix}\ (\lambda g x. f\ (\mathrm{fmap}\ (\semCons{Lam}\
+  (\lambda x. \semCons{Pair}\ (x, g\ x)))))$, so that
+  $\mathrm{primrec}\ \mathrm{fmap}\ f = \semCons{Lam}\ h$ and likewise
+  for $h'$. By the definition of the semantic function type
+  constructor it suffices to show that for all $(x,x') \in \mu F
+  \delta$, $(h x, h' x') \in C\delta$. Let $P \in \ClkPER(\Delta)$ be
+  defined as:
+  \begin{displaymath}
+    P\delta = \{ (x,x') \in (\mu F)\delta \sepbar (h x, h' x') \in C\delta \},
+  \end{displaymath}
+  If we can show that $P = \mu F$ then the lemma is proved. We first
+  need to check that $P$ is actually a semantic type, which follows
+  from the facts that $\mu F$ and $C$ are semantic types, and the
+  continuity of $h$ and $h'$. To apply the Knaster-Tarski theorem to
+  show that $P = \mu F$ we must show that $FP \subseteq P$. So for any
+  $(y,y') \in FP\delta$, we must show that $(h y, h' y') \in
+  C\delta$. By unfolding the applications of $\mathrm{fix}$ in the
+  definitions of $h$ and $h'$ this amounts to showing that
+  \begin{displaymath}
+    \left(
+      \begin{array}{l}
+        f\ (\mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h\ x)))\ y),\\
+        f'\ (\mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h'\ x)))\ y')
+      \end{array}
+    \right)\in C\delta
+  \end{displaymath}
+  By the assumption that $(f,f') \in (F(\mu F \times C) \to C)\delta$
+  it suffices to show that
+  \begin{equation}
+    \label{eq:primrec-welltyped-1}
+    \left(
+      \begin{array}{l}
+        \mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h\ x)))\ y,\\
+        \mathrm{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h'\ x)))\ y'
+      \end{array}
+    \right)\in F(\mu F \times C)\delta
+  \end{equation}
+  Now, since $(\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h\ x)),
+  \semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x,h'\ x))) \in (P \to
+  \mu F \times C)\delta$, we can use the assumption on $\mathrm{fmap}$
+  to show \autoref{eq:primrec-welltyped-1}, and we are done.
+\end{proof}
+
+\lemref{lem:substitution-lemma}:
+
+\begin{proof}
+  By induction on the structure of $A$. The interesting cases go as
+  follows:
+
+  When $A = \delay{\kappa''}A'$, we have two cases depending on
+  whether $\kappa'' = \kappa$ or not. If $\kappa'' = \kappa$, then
+  $A[\kappa \mapsto \kappa'] = (\delay\kappa A')[\kappa \mapsto
+  \kappa'] = \delay{\kappa'} (A[\kappa \mapsto \kappa'])$. The LHS of
+  the equation to prove is:
+  \begin{displaymath}
+    \begin{array}{cl}
+      & \sem{A}\theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =& \sem{\delay{\kappa}A'} \theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =& \left\{
+        \begin{array}{ll}
+          \sem{A'}\theta(\delta[\kappa \mapsto n]) & \textrm{if }\delta(\kappa') = n + 1 \\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  While the RHS of the equation is:
+  \begin{displaymath}
+    \begin{array}{cl}
+      & \sem{A[\kappa \mapsto \kappa']}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\sem{\delay{\kappa'}(A'[\kappa\mapsto\kappa'])}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\left\{
+        \begin{array}{ll}
+          \sem{A'[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])(\delta[\kappa' \mapsto n]) & \textrm{if }\delta(\kappa') = n + 1 \\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  Thus if $\delta(\kappa') = 0$, then we are done. If $\delta(\kappa')
+  = n + 1$ we have $\sem{A'}\theta(\delta[\kappa\mapsto n]) =
+  \sem{A'}\theta(\delta[\kappa'\mapsto n][\kappa \mapsto
+  \delta(\kappa')])$, since $\kappa' \not\in \mathit{fv}(A)$, which is
+  equal to
+  $\sem{A'[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])(\delta[\kappa'\mapsto
+  n])$ by the induction hypothesis, as required.
+
+  If $\kappa'' \not\in \kappa$, then we have $A[\kappa \mapsto
+  \kappa'] = (\delay{\kappa''} A')[\kappa \mapsto \kappa'] =
+  \delay{\kappa''} (A'[\kappa \mapsto \kappa'])$. The LHS of the
+  equation to prove is:
+  \begin{displaymath}
+    \begin{array}{cl}
+      & \sem{A}\theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =& \sem{\delta{\kappa''}A'} \theta (\delta[\kappa \mapsto \delta(\kappa')]) \\
+      =&\left\{
+        \begin{array}{ll}
+          \sem{A'}\theta(\delta[\kappa'' \mapsto n, \kappa \mapsto \delta(\kappa')]) & \textrm{if }\delta(\kappa'') = n + 1 \\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  While the RHS of the equation is:
+  \begin{displaymath}
+    \begin{array}{@{}c@{\hspace{0.3em}}l}
+      & \sem{A[\kappa \mapsto \kappa']}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\sem{\delay{\kappa''}(A'[\kappa\mapsto\kappa'])}(\theta[\kappa\mapsto\kappa'])\delta \\
+      =&\left\{
+        \begin{array}{ll}
+          \sem{A'[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])(\delta[\kappa'' \mapsto n]) & \textrm{if }\delta(\kappa'') = n + 1\\
+          \top_D & \textrm{otherwise}
+        \end{array}
+      \right.
+    \end{array}
+  \end{displaymath}
+  The required equation now follows directly from the induction
+  hypothesis.
+\end{proof}
+
+\lemref{lem:type-equality}:
+
+\begin{proof}
+  By induction on the derivation of $\Delta \vdash A \equiv
+  B$. Reflexivity, symmetry, transitivity and congruence are all
+  trivial. 
+
+  When the equation is $\forall \kappa. A \equiv A$: we have $(d,d')
+  \in \sem{\forall \kappa. A}\delta$ iff $\forall n. (d,d') \in
+  \sem{A}(\delta[\kappa\mapsto n])$ iff (since $\kappa \not\in
+  \mathit{fv}(A)$) $(d,d') \in \sem{A}\delta$.  
+
+  When the equation is $\forall \kappa. A + B \equiv (\forall
+  \kappa. A) + (\forall \kappa. B)$: If $(d,d') \in \sem{\forall
+    \kappa. A + B}\delta$ then $(d,d') \in \sem{A + B}(\delta[\kappa
+  \mapsto n])$ for all $n$. By case analysis on $d$ and $d'$, either
+  $d = \mathsf{Inl}\ x$, $d' = \mathsf{Inr}\ x'$ and $(x,x') \in
+  \sem{A}(\delta[\kappa \mapsto n])$ for all $n$, or $d =
+  \mathsf{Inr}\ y$, $d' = \mathsf{Inr}\ y'$ and $(y,y') \in
+  \sem{B}(\delta[\kappa\mapsto n])$ for all $n$. In either case we are
+  done. The opposite direction is similar.
+
+  When the equation is $\forall \kappa. A \times B \equiv (\forall
+  \kappa. A) \times (\forall \kappa. B)$: $(d,d') \in \sem{\forall
+    \kappa. A \times B}\delta$ iff $(d,d') \in \sem{A \times
+    B}(\delta[\kappa \mapsto n])$ for all $n$. This is exactly when $d
+  = \mathsf{Pair}(x,y)$, $d' = \mathsf{Pair}(x',y')$ and $\forall n.\
+  (x,x') \in \sem{A}(\delta[\kappa \mapsto n])$ and $\forall n.\
+  (y,y') \in \sem{A}(\delta[\kappa \mapsto n])$, as required.
+
+  When the equation is $\forall \kappa. A \to B \equiv A \to \forall
+  \kappa. B$: if $(d,d') \in \sem{\forall \kappa.A \to B}\delta$ then
+  $d = \mathsf{Lam}\ f$ and $d' = \mathsf{Lam}\ f'$, for some $f$,$f'$
+  such that $\forall n. \forall \delta' \sqsubseteq \delta[\kappa
+  \mapsto n], (x,x') \in \sem{A}\delta'. (f(x),f'(x')) \in
+  \sem{B}\delta'$. Given $\delta'' \sqsubseteq \delta$ and $(x,x') \in
+  \sem{A}\delta''$ then for all $n$, $(x,x') \in
+  \sem{A}(\delta''[\kappa \mapsto n])$ (since $\kappa \not\in
+  \mathit{fv}(A)$), and $\delta''[\kappa \mapsto n] = \delta[\kappa
+  \mapsto n]$. Therefore $(f(x),f'(x')) \in \sem{B}(\delta''[\kappa
+  \mapsto n])$, and so $(d,d') = (\mathsf{Lam}\ f, \mathsf{Lam}\ f')
+  \in \sem{A \to \forall \kappa. B}\delta$. In the opposite direction,
+  if $(d,d') = (\mathsf{Lam}\ f, \mathsf{Lam}\ f') \in \sem{A \to
+    \forall \kappa.B}\delta$ then $\forall \delta' \sqsubseteq \delta,
+  (x,x') \in \sem{A}\delta'.\ \forall n. (f(x),f'(x')) \in
+  \sem{B}(\delta'[\kappa \mapsto n])$. Given $n$, $\delta''
+  \sqsubseteq \delta[\kappa \mapsto n]$ and $(x,x') \in
+  \sem{A}\delta''$, then there exists a $\delta'$ and $n' \leq n$ with
+  $\delta'' = \delta'[\kappa \mapsto n'$. Since $\kappa \not\in
+  \mathit{fv}(A)$, $(x,x') \in \sem{A}\delta'$, and $(f(x),f'(x')) \in
+  \sem{B}(\delta'[\kappa \mapsto n']) = \sem{B}\delta''$, as
+  required.
+
+  When the equation is $\forall \kappa. \forall \kappa'. A \equiv
+  \forall \kappa'. \forall \kappa. A$: $(d,d') \in
+  \sem{A}(\delta[\kappa \mapsto n, \kappa' \mapsto n'])$ for all
+  $n,n'$ if and only if $(d,d') \in \sem{A}(\delta[\kappa' \mapsto n',
+  \kappa \mapsto n])$ for all $n',n$. This is just trivial interchange
+  of universal quantification.
+
+  FIXME: write up the last two equations.
+\end{proof}
+
+\thmref{thm:semantic-soundness}:
+
+\begin{proof}
+  By induction on the derivation of $\Delta; \Gamma \vdash e : A$. For
+  \TirName{Var}, by assumption $(\eta(\ident{x}),\eta'(\ident{x})) \in
+  \sem{A}\delta$ so we are done.
+
+  For \TirName{Unit}, from the interpretation of terms, we know that
+  for all $\eta$ and $\eta'$, $(\sem{*}\eta, \sem{*}\eta') =
+  (\semCons{Unit}, \semCons{Unit}) \in \sem{1}\delta$.
+
+  For \TirName{Abs}, by the induction hypothesis, we know that for all
+  $\delta \in \sem{\Delta}$, $(\eta,\eta') \in \sem{\Gamma}\delta$ and
+  $(v,v') \in \sem{A}\delta$, $(\sem{e}(\eta[\ident{x} \mapsto v]),
+  \sem{e}(\eta[\ident{x} \mapsto v']) \in \sem{B}\delta$. So for any
+  $\delta \in \sem{\Delta}$, we need to prove that $(\eta,\eta') \in
+  \sem{\Gamma}\delta$ implies that $(\semCons{Lam}\ (\lambda v.\
+  \sem{e}(\eta[\ident{x} \mapsto v])), \semCons{Lam}\ (\lambda v.\
+  \sem{e}(\eta'[\ident{x} \mapsto v]))) \in \sem{A \to
+    B}\delta$. Given $\delta' \sqsubseteq \delta$ and $(v,v') \in
+  \sem{A}\delta'$, we also know that $(\eta,\eta') \in
+  \sem{\Gamma}\delta'$ by Kripke monotonicity, so we can apply the
+  inductive hypothesis to show that $(\sem{e}(\eta[\ident{x} \mapsto
+  v]), \sem{e}(\eta'[\ident{x} \mapsto v'])) = ((\lambda
+  v. \sem{e}(\eta[\ident{x} \mapsto v]))v, (\lambda v.\
+  \sem{e}(\eta'[\ident{x} \mapsto v]))v') \in \sem{B}\delta'$, as
+  required.
+
+  For \TirName{App}, by the induction hypothesis we know that for all
+  $\delta \in \sem{\Delta}$, and $(\eta, \eta') \in
+  \sem{\Gamma}\delta$, $(\sem{f}\eta, \sem{f}\eta') \in \sem{A \to
+    B}\delta$ and $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A}\delta$. Thus we can conclude that there exist $d_f, d'_f$
+  such that $\sem{f}\eta = \semCons{Lam}\ d_f$ and $\sem{f}\eta' =
+  \semCons{Lam}\ d'_f$ and $(d_f(\sem{e}\eta), d'_f(\sem{e}\eta')) \in
+  \sem{B}\delta$, as required.
+
+  For \TirName{Pair}, the induction hypothesis says that
+  $(\sem{e_1}\eta, \sem{e_1}\eta') \in \sem{A}\delta$ and
+  $(\sem{e_2}\eta, \sem{e_2}\eta') \in \sem{B}\delta$, so we can conclude
+  that $(\semCons{Pair}(\sem{e_1}\eta, \sem{e_2}\eta),
+  \semCons{Pair}(\sem{e_1}\eta', \sem{e_2}\eta')) \in \sem{A \times
+    B}\delta$.
+
+  For \TirName{Fst} and \TirName{Snd}, by the induction hypothesis, we
+  know that $(\sem{e}\eta, \sem{e}\eta') \in \sem{A \times B}\delta$,
+  therefore there exist $d_1,d_2,d'_1,d'_2$ such that $\sem{e}\eta =
+  \semCons{Pair}(d_1, d_2)$, $\sem{e}\eta' =
+  \semCons{Pair}(d'_1,d'_2)$ and $(d_1,d'_1) \in \sem{A}\delta$ and
+  $(d_2,d'_2) \in \sem{B}\delta$. Thus in both cases we are done.
+
+  For \TirName{Inl}, the induction hypothesis says that $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{A}\delta$, so it follows immediately that
+  $(\sem{\kw{inl}\ e}\eta, \sem{\kw{inr}\ e}\eta') = (\semCons{Inl}\
+  (\sem{e}\eta), \semCons{Inr}\ (\sem{e}\eta')) \in \sem{A +
+    B}\delta$. The \TirName{Inr} case is similar.
+
+  For \TirName{Case}, by the induction hypothesis, we know that
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{A + B}\delta$. So either there
+  are $(d,d') \in \sem{A}\delta$ such that $\sem{e}\eta =
+  \semCons{Inl}\ d$ and $\sem{e}\eta' = \semCons{Inl}\ d'$ or there
+  are $(d,d') \in \sem{B}\delta$ such that $\sem{e}\eta =
+  \semCons{Inr}\ d$ and $\sem{e}\eta' = \semCons{Inr}\ d'$. In the
+  first case, by the induction hypothesis, we know that
+  $(\sem{f}(\eta[\ident{x} \mapsto d]), \sem{f}(\eta'[\ident{x}
+  \mapsto d'])) \in \sem{C}\delta$, as required. The $\mathsf{Inr}$
+  case is similar.
+
+  For \TirName{DePure}, we know that $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A}\delta$. Since $\sem{A}\delta \subseteq \sem{\delay\kappa
+    A}\delta$ by Kripke monotonicity and the definition of the
+  semantic type operator $\delay\kappa-$, we have that
+  $(\sem{\kw{pure}\ e}\eta, \sem{\kw{pure}\ e}\eta') \in
+  \sem{\delay\kappa A}\delta$.
+
+  For \TirName{DeApp}, we know that $(\sem{f}\eta,\sem{f}\eta') \in
+  \sem{\delay\kappa(A \to B)}\delta$ and $(\sem{a}\eta,\sem{a}\eta')
+  \in \sem{\delay\kappa A}\delta$. If $\delta(\kappa) = 0$ then it
+  doesn't matter what $\sem{f}\eta$ or $\sem{f}\eta'$ are, since
+  $\sem{\delay\kappa B}(\delta[\kappa\mapsto 0]) = \top_D$. If
+  $\delta(\kappa) = n + 1$, then $(\sem{f}\eta, \sem{f}\eta') \in
+  \sem{A \to B}(\delta[\kappa \mapsto n])$ and $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{A}(\delta[\kappa \mapsto n])$. Then, by the
+  same argument above for the \TirName{App} case, $(\sem{f \circledast
+    e}\eta, \sem{f \circledast e}\eta') \in \sem{A}(\delta[\kappa
+  \mapsto n]) = \sem{\delay\kappa A}\delta$, as required.
+
+  For \TirName{$\kappa$-Abs}, we know that for all $\delta \in
+  \sem{\Delta, \kappa}$ and $(\eta,\eta') \in \sem{\Gamma}\delta$,
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{A}\delta$. So if we are given
+  $\delta' \in \sem{\Delta}$, and $(\eta, \eta') \in
+  \sem{\Gamma}\delta'$, then for all $n \in \mathbb{N}$,
+  $\delta'[\kappa \mapsto n] \in \sem{\Delta, \kappa}$, and
+  $(\eta,\eta') \in \sem{\Gamma}(\delta'[\kappa \mapsto n])$ (since
+  $\kappa \not\in \mathit{fv}(\Gamma)$) and therefore $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{A}(\delta[\kappa \mapsto n])$. So
+  $(\sem{\Lambda \kappa. e}\eta, \sem{\Lambda \kappa. e}\eta') =
+  (\sem{e}\eta, \sem{e}\eta') \in \sem{\forall \kappa.A}\delta$, as
+  required.
+
+  For \TirName{$\kappa$-App}, we know that for all $n \in \mathbb{N}$,
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{A}(\delta[\kappa \mapsto n])$,
+  so certainly $(\sem{e}\eta, \sem{e}\eta') \in \sem{A}(\delta[\kappa
+  \mapsto \delta(\kappa')])$. Hence, by
+  \lemref{lem:substitution-lemma}, $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A[\kappa\mapsto\kappa']}\delta$, as required.
+
+  For \TirName{TyEq}, we know that $(\sem{e}\eta, \sem{e}\eta') \in
+  \sem{A}\delta$, but by \lemref{lem:type-equality}, $\Delta \vdash A
+  \equiv B$ implies that $\sem{A}\delta = \sem{B}\delta$, so
+  $(\sem{e}\eta, \sem{e}\eta') \in \sem{B}\delta$, as required.
+
+  For \TirName{Fix}, we need to show that if $(\semCons{Lam}\ f,
+  \semCons{Lam}\ f') \in \sem{\delay\kappa A \to A}\delta$, then
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{A}\delta$. Let $m =
+  \delta(\kappa)$. We know that for all $n \leq m$, $(x,x') \in
+  \sem{\delay\kappa A}(\delta[\kappa \mapsto n])$ implies $(f(x),
+  f'(x')) \in \sem{A}(\delta[\kappa \mapsto n])$. We show that
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa
+  \mapsto n])$ for all $n \leq m$ by induction on $n$, which implies
+  our desired result. When $n = 0$, we know that $(\mathrm{fix}\ f,
+  \mathrm{fix}\ f') \in \top_D = \sem{\delay\kappa A}(\delta[\kappa
+  \mapsto 0])$, so $(f\ (\mathrm{fix}\ f), f'\ (\mathrm{fix}\ f')) \in
+  \sem{A}(\delta[\kappa \mapsto 0])$. Since $f\ (\mathrm{fix}\ f) =
+  \mathrm{fix}\ f$, and likewise for $f'$, we have $(\mathrm{fix}\ f,
+  \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa \mapsto 0])$, as
+  required. When $n = n' + 1$ (and $n \leq m$), we know that
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa
+  \mapsto n'])$ by the induction hypothesis, which implies that
+  $(\mathrm{fix}\ f, \mathrm{fix}\ f') \in \sem{\delay\kappa
+    A}(\delta[\kappa \mapsto n])$. Thus $(f\ (\mathrm{fix}\ f), f'\
+  (\mathrm{fix}\ f')) \in \sem{A}(\delta[\kappa \mapsto n]$, by the
+  fact that $f$ and $f'$ are related. Hence $(\mathrm{fix}\ f,
+  \mathrm{fix}\ f') \in \sem{A}(\delta[\kappa \mapsto n])$, as
+  required.
+
+  For \TirName{Force}, we know that for all $\delta \in \sem{\Delta}$
+  and $(\eta,\eta') \in \sem{\Gamma}\delta$, $\forall n.\
+  (\sem{e}\eta,\sem{e}\eta') \in \sem{\delay\kappa A}(\delta[\kappa
+  \mapsto n])$. So for any $n$, $(\sem{e}\eta,\sem{e}\eta') \in
+  \sem{A}(\delta[\kappa \mapsto n])$ since $\sem{\delay\kappa
+    A}(\delta[\kappa\mapsto n+1]) = \sem{A}(\delta[\kappa\mapsto
+  n])$. Hence $(\sem{\kw{force}\ e}\eta, \sem{\kw{force}\ e}\eta') \in
+  \sem{\forall \kappa. A}\delta$.
+
+  For \TirName{Cons}, we use the fact that $\mu F = F(\mu F)$, since
+  it is a fixpoint. By the induction hypothesis we have $(\sem{e}\eta,
+  \sem{e}\eta') \in \sem{F[\mu X. F]}\delta$. Since $\sem{F[\mu X. F]}
+  = \sem{F}(\mu \sem{F}) = \mu \sem{F} = \sem{\mu X. F}$, and
+  $(\sem{\cons{Cons}\ e}\eta, \sem{\cons{Cons}\ e}\eta') =
+  (\sem{e}\eta, \sem{e}\eta')$, we are done. For \TirName{PrimRec}, we
+  use \lemref{lem:primrec-well-typed} and
+  \lemref{lem:sem-fmap-well-typed}.
+\end{proof}
+
+
+%%% Local Variables:
+%%% TeX-master: "paper"
+%%% End:
