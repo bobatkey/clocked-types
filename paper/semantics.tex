@@ -1,4 +1,5 @@
-\section{Semantics}\label{sec:semantics}
+\section{A denotational semantics for clocks and guards}
+\label{sec:semantics}
 
 We now present a denotational semantics for the type system we
 presented in the \hyperref[sec:type-system]{previous section}. This
@@ -174,9 +175,9 @@ variables in $\Theta$. This definition is presented in
     \mathrm{fmap_{\delay\kappa F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
     \mathrm{fmap_{\forall\kappa.F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
     \mathrm{fmap_{\mu X. F}}\ \vec{f}\ x & = &
-    \begin{array}[t]{l}
+    \begin{array}[t]{@{}l}
       \mathrm{primrec}\ (\mathrm{fmap_F}\ \vec{f})\ \\
-      \quad\quad\quad\quad(\mathrm{fmap}_F\ \vec{f}\ \mathrm{snd})\ x
+      \quad\quad\quad\quad(\mathrm{fmap_F}\ \vec{f}\ \mathrm{snd})\ x
     \end{array}
   \end{eqnarray*}
   where
@@ -398,15 +399,14 @@ demonstrate a semantic well-typedness result for the
 $\mathrm{primrec}$ functon we defined in
 \autoref{sec:semantics-of-programs}.
 
+\fixme{State the lemma in English}
+
 \begin{lemma}\label{lem:primrec-well-typed}
   Let $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$ be a monotone
-  function.  Let $\mathrm{fmap} : D \to D \to D$ be such that:
-  \begin{enumerate}
-  \item For all $\delta \in \sem{\Delta}$, for all $A,B \in
-    \ClkPER(\Delta)$, and for all $(g,g') \in (A \to B)\delta$ and
-    $(x,x') \in FA\delta$, we have $(\mathrm{fmap}\ g\ x,
-    \mathrm{fmap}\ g'\ x') \in FB\delta$.
-  \end{enumerate}
+  function.  Let $\mathrm{fmap} : D \to D \to D$ be such that for all
+  $\delta \in \sem{\Delta}$, for all $A,B \in \ClkPER(\Delta)$, and
+  for all $(g,g') \in (A \to B)\delta$ and $(x,x') \in FA\delta$, we
+  have $(\mathrm{fmap}\ g\ x, \mathrm{fmap}\ g'\ x') \in FB\delta$.
   Then, for all $\delta \in \sem{\Delta}$ and for all $(f,f') \in
   (F(\mu F \times C) \to C)\delta$, where $C$ is a semantic type, we
   have
@@ -414,6 +414,10 @@ $\mathrm{primrec}$ functon we defined in
     (\mathrm{primrec}\ \mathrm{fmap}\ f, \mathrm{primrec}\ \mathrm{fmap}\ f') \in (\mu F \to C)\delta
   \end{displaymath}
 \end{lemma}
+
+\fixme{proof sketch}
+
+\fixme{forward ref to initial algebra property}
 
 \subsection{Interpretation of Syntactic Types}\label{sec:type-interp}
 
