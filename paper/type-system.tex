@@ -11,27 +11,6 @@ features. In the next section, we define a semantic model for our
 system in which we can formally state the results that we claimed in
 the introduction.
 
-% FIXME: rewrite this introductory paragraph to flow better
-
-% In this section we present the type system with guarded recursion and
-% clock variables that we presented informally in the
-% \hyperref[sec:introduction]{introduction}. This type system
-% incorporates a general notion of strictly positive inductive types,
-% including nested fixpoints, and a guardedness type operator which
-% allows for the expression of condinductive types. In
-% \autoref{sec:examples} we present several examples of the use of our
-% system, including presentations of the informal examples from the
-% \hyperref[sec:introduction]{introduction}. In \autoref{sec:semantics}
-% we provide a semantics for this system in terms of an untyped
-% domain-theoretic model that establishes the soundness properties of
-% our typing discipline.
-
-% FIXME: justify switch from :: to : for typing
-
-% FIXME: highlight forwards refs
-% FIXME: stop this intro being so formal, continue narrative
-% FIXME: highlight the interesting bits
-
 \subsection{Well-formed types with clock variables}
 \label{sec:types}
 
@@ -143,12 +122,11 @@ clock quantification commutes with almost all type formers, except for
 guards indexed by the same clock variable. \fixme{Why not force? same reason as for not using type equalities for $\mu$}
 
 The following rules are intended to be read as defining a judgement
-$\Delta; \Theta \vdash A \equiv B : \sortType$, indicating that
-the well-formed types $\Delta; \Theta \vdash A : \sortType$ and
-$\Delta; \Theta \vdash B : \sortType$ are to be considered equal. In
-addition to these rules, we also assume that the relation $\Delta
-\vdash A \equiv B : \sortType$ is reflexive, symmetric, transitive and
-a congruence.
+$\Delta; \Theta \vdash A \equiv B : \sortType$, indicating that the
+well-formed types $\Delta; \Theta \vdash A : \sortType$ and $\Delta;
+\Theta \vdash B : \sortType$ are to be considered equal. In addition
+to these rules, the relation $\Delta \vdash A \equiv B : \sortType$ is
+reflexive, symmetric, transitive and a congruence.
 \begin{displaymath}
   \begin{array}{r@{\hspace{0.3em}}c@{\hspace{0.3em}}ll}
     \forall \kappa. A & \equiv & A & (\kappa \not\in \mathit{fc}(A)) \\
@@ -193,7 +171,8 @@ equality $\forall \kappa. F[-] \equiv F[\forall
 \kappa. -]$). Therefore, we elect to include type equalities for
 commuting clock quantification with all type formers uniformly.
 
-\subsection{Well-typed Terms}\label{sec:typed-terms}
+\subsection{Well-typed Terms}
+\label{sec:typed-terms}
 
 \begin{figure*}[t]
   \centering
@@ -403,24 +382,24 @@ are productive.
 \autoref{sec:infinite-to-finite}, programming with guarded types is
 productive, but they are fundamentally incompatible with normal
 inductive types. Recall that if we define infinite streams of $A$s as
-$\tyname{Stream} = \mu X. A \times \delay\kappa X$, then there is no
-way of defining a function $\ident{tail} : \tyname{Stream} \to
-\tyname{Stream}$; the best we can do is $\ident{tail} :
-\tyname{Stream} \to \delay\kappa\tyname{Stream}$. The rest of the
+$\tyname{Stream}~A = \mu X. A \times \delay\kappa X$, then there is no
+way of defining a function $\ident{tail} : \tyname{Stream}~A \to
+\tyname{Stream}~A$; the best we can do is $\ident{tail} :
+\tyname{Stream}~A \to \delay\kappa\tyname{Stream}~A$. The rest of the
 stream only exists ``tomorrow''.
 
 Clock quantification fixes this problem. We define:
 \begin{displaymath}
-  \tyname{Stream} = \forall \kappa. \mu X. A \times \delay\kappa A
+  \tyname{Stream}~A = \forall \kappa. \mu X. A \times \delay\kappa A
 \end{displaymath}
 Now we can define the two deconstructors for making observations on
-streams:
+streams, with the right types:
 \begin{displaymath}
   \begin{array}{lcl}
-    \ident{head} &:& \tyname{Stream} \to A \\
+    \ident{head} &:& \tyname{Stream}~A \to A \\
     \ident{head} &=& \lambda s. \Lambda \kappa. \elim{primrec}~(\lambda x. \kw{fst}~x)~(s[\kappa]) \\
     \\
-    \ident{tail} &:& \tyname{Stream} \to \tyname{Stream} \\
+    \ident{tail} &:& \tyname{Stream}~A \to \tyname{Stream}~A \\
     \ident{tail} &=& \lambda s. \Lambda \kappa. \elim{primrec}~(\lambda x. \kw{snd}~x)~(s[\kappa])
   \end{array}
 \end{displaymath}
@@ -434,8 +413,8 @@ Ghani, Hancock and Pattinson \cite{streameating} define a type of
 representations of continuous functions on streams using a least
 fixpoint type nested within a greatest fixpoint. A continuous function
 on streams is a function that only requires a finite amount of input
-for each output. Ghani \etal's type is expressed in our system as
-follows:
+for each element of the output. Ghani \etal's type is expressed in our
+system as follows:
 \begin{displaymath}
   \tyname{SP}~I~O = \forall \kappa. \mu X. \mu Y. (I \to Y) + (O \times \delay\kappa X)
 \end{displaymath}
