@@ -1,47 +1,25 @@
 \section{A denotational semantics for clocks and guards}
 \label{sec:semantics}
 
-We now present a denotational semantics for the type system we
-presented in the \hyperref[sec:type-system]{previous section}. This
-semantics establishes the key soundness properties: avoidance of
-non-terminating functions and correct representation of final
-coalgebras.
+We have claimed that by adhering to the typing discipline from the
+previous section, we are guaranteed that programs will be
+productive. We now substantiate this claim by defining a
+domain-theoretic model of our system, and showing that the denotation
+of a well-typed closed term is never $\bot$. We accomplish this by
+using a multiply-step-indexed interpretation of types, where the
+multiple step indexings correspond to the multiple clock variables
+that may be in scope.
 
-In \autoref{sec:semantics-of-programs} we define an untyped model of
-the calculus we defined in the previous section. Each term of the
-calculus is interpreted in a domain-theoretic model of the untyped
-lazy $\lambda$-calculus. A highlight of this interpretation is that
-the $\kw{fix}$ operator from our calculus is interpreted directly as
-the domain-theoretic fixpoint in the model. In
-\autoref{sec:clock-envs} we start to define the semantics of types, by
-first defining the semantics of the clock contexts $\Delta$. Clock
-contexts are interpreted as clock environments: collections of
-step-indexing counters, counting down. Then in
-\autoref{sec:semantic-types} we define semantic types as special kinds
-of partial equivalence relations (PERs) over the untyped
-domain-theoretic model, indexed by a clock environments. In
-\autoref{sec:type-interp}, we show how to interpret each of the
-syntactic types in our calculus as semantic types, and in
-\autoref{sec:semantic-soundness} we show our first main result: that
-every well-typed term is semantically well-typed. Finally, in
-\autoref{sec:fixpoint-types}, we state and prove the initiality and
-finality of the various definitions of fixpoint types that we stated
-in \autoref{sec:main-results-intro}.
+\subsection{Semantics of Terms}
+\label{sec:semantics-of-programs}
 
-\subsection{Semantics of Programs}\label{sec:semantics-of-programs}
-
-We interpret terms of our programming language in (a mild extension
-of) the standard domain theoretic model of the untyped lazy
-$\lambda$-calculus \cite{PittsAM:compavm}. The key feature of this
-semantics is the erasure of anything to do with the guardedness type
-constructor $\delay\kappa-$ and the clock variables and
-quantification. The $\kw{fix}$ operator is ``implemented'' directly as
-the domain-theoretic fixpoint. This semantics can be seen as a
-compilation process from our typed, guarded and clocked calculus into
-the untyped lazy $\lambda$-calculus. The semantic type soundness
-property that we prove in \autoref{sec:semantic-soundness} shows that
-our typing discipline ensures that we only compile to productive
-programs.
+We interpret terms in (a mild extension of) the standard domain
+theoretic model of the untyped lazy $\lambda$-calculus
+\cite{PittsAM:compavm}. A feature of this semantics is the erasure of
+anything to do with the guardedness type constructor $\delay\kappa-$
+and the clock quantification. The $\kw{fix}$ operator is interpreted
+directly as the domain-theoretic fixpoint, i.e., exactly the usual
+interpretation of recursion in functional programming languages.
 
 We assume a directed complete partial order with bottom
 ($\mathrm{DCPO}_\bot$), $D$, satisfying the following recursive domain
@@ -54,26 +32,20 @@ element of all the components. We are guaranteed to be able to obtain
 such a $D$ by standard results about the category $\mathrm{DCPO}_\bot$
 \cite{smythplotkin}. The five components of the right hand side of
 this equation will be used to carry functions, products, the left and
-right injections for sum types and the unit value
-respectively. Accordingly, we use the following symbols to represent
-the matching continuous injective maps into $D$:
+right injections for sum types and the unit value respectively. We use
+the following symbols to represent the corresponding continuous
+injective maps into $D$:
 \begin{center}
   \begin{tabular}{ll}
-    $\semCons{Lam} : [D \to D] \to D$ & $\semCons{Pair} : D \times D \to D$ \\
+    $\semCons{Lam} : (D \to D) \to D$ & $\semCons{Pair} : D \times D \to D$ \\
     $\semCons{Inl} : D \to D$ & $\semCons{Inr} : D \to D$ \\
     $\semCons{Unit} : 1 \to D$
   \end{tabular}  
 \end{center}
 We will write $\semCons{Unit}$ instead of $\semCons{Unit}\ *$.
 
-% FIXME: brief recap of DCPPO, in particular the fixpoint operator
-
-We assume that the set of all possible identifier names is represented
-by $V$. Environments $\eta$ are modelled as maps from $V$ to elements
-of $D$. These are exactly as one would expect for an untyped
-interpretation of the simply-typed $\lambda$-calculus. It can be
-easily checked that this collection of equations defines a continuous
-function $D^V \to D$, since everything is built from standard parts.
+\begin{figure}[t]
+  \centering
 \begin{eqnarray*}
   \sem{x}\eta & = & \eta(x) \\
   \sem{*}\eta & = & \semCons{Unit} \\
@@ -102,7 +74,7 @@ function $D^V \to D$, since everything is built from standard parts.
   \left\llbracket
     \begin{array}{l}
       \kw{case}\ e\ \kw{of}\\
-      \quad\kw{inl}\ \ident{x}.f;\\
+      \quad\kw{inl}\ \ident{x}.f\\
       \quad\kw{inr}\ \ident{y}.g
     \end{array}
   \right\rrbracket\eta & = &
@@ -113,22 +85,37 @@ function $D^V \to D$, since everything is built from standard parts.
       \bot & \textrm{otherwise}
     \end{array}
   \right. \\
-\end{eqnarray*}
-The delay and force operators are just no-ops in this interpretation,
-and applicative apply is just normal function application.
+\end{eqnarray*}  
+  \caption{Semantics for the simply-typed portion of our system}
+  \label{fig:semantics1}
+\end{figure}
+
+Let $V$ be the set of all possible term-level variable
+names. Environments $\eta$ are modelled as maps from $V$ to elements
+of $D$. Terms are interpreted as continuous maps from environments to
+elements of $D$. The clauses for defining the interpretation of parts
+of our system that are just the simply-typed $\lambda$-calculus are
+standard, and displayed in \autoref{fig:semantics1}. It can be easily
+checked that this collection of equations defines a continuous
+function $\sem{-} : (V \to D) \to D$, since everything is built from
+standard parts \cite{mitchell}.
+
+The applicative functor structure for the guard modality is
+interpreted just as the identity function and normal application, as
+we promised in \autoref{sec:typed-terms}:
 \begin{eqnarray*}
-  \sem{\kw{delay}\ e}\eta & = & \sem{e}\eta \\
+  \sem{\kw{pure}\ e}\eta & = & \sem{e}\eta \\
   \sem{f \circledast e}\eta & = & \left\{
     \begin{array}{ll}
       d_f\ (\sem{e}\eta) & \textrm{if}\ \sem{f}\eta = \semCons{Lam}\ d_f \\
       \bot & \textrm{otherwise}
     \end{array}
-  \right. \\
-  \sem{\kw{force}\ e}\eta & = & \sem{e}\eta
+  \right.
 \end{eqnarray*}
-Our interpretation simply translates the fixpoint combinator of the
-calculus as the usual fixpoint operator $\mathrm{fix}\ f = \bigsqcup_n
-f^n(\bot)$ in $\mathrm{DCPO}_\bot$.
+Our interpretation simply translates the $\kw{fix}$ operator as the
+usual fixpoint operator $\mathrm{fix}\ f = \bigsqcup_n f^n(\bot)$ in
+$\mathrm{DCPO}_\bot$. The $\kw{force}$ operator is interpreted as a
+no-operation.
 \begin{eqnarray*}
   \sem{\kw{fix}\ f}\eta & = &
   \left\{
@@ -136,33 +123,37 @@ f^n(\bot)$ in $\mathrm{DCPO}_\bot$.
       \mathrm{fix}\ d_f & \textrm{if }\sem{f}\eta = \semCons{Lam}\ d_f \\
       \bot & \textrm{otherwise}
     \end{array}
-  \right.
+  \right.\\
+  \sem{\kw{force}\ e}\eta & = & \sem{e}\eta
 \end{eqnarray*}
 
-Finally, we interpret the constructor and primitive recursion
-eliminator for types of the form $\mu X. F[X]$. The interpretation of
-terms of the form $\cons{Cons}\ e$ is straightforward: the constructor
-itself disappears at runtime, so the interpretation simply ignores it:
+Finally, we interpret the constructor $\cons{Cons$_F$}$ and primitive
+recursion eliminator $\elim{primRec$_F$}$ for least fixpoint
+types. The interpretation of construction is straightforward: the
+constructor itself disappears at runtime, so the interpretation simply
+ignores it:
 \begin{eqnarray*}
-  \sem{\cons{Cons}\ e}\eta & = & \sem{e}\eta
+  \sem{\cons{Cons$_F$}\ e}\eta & = & \sem{e}\eta
 \end{eqnarray*}
 
-To define the semantic counterpart of the $\elim{primRec}$ operator,
-we first define a higher-order continuous function $\mathrm{primrec} :
-(D \to D \to D) \to (D \to D) \to D$ in the model:
+To define the semantic counterpart of the $\elim{primRec$_F$}$
+operator, we first define a higher-order continuous function
+$\mathrm{primrec} : (D \to D \to D) \to (D \to D) \to D$ in the
+model. This is very similar to how one would define a generic
+$\elim{primRec$_F$}$ in Haskell using general recursion, albeit here
+in an untyped fashion.
 \begin{displaymath}
   \begin{array}{l}
     \mathrm{primrec}\ \mathit{fmap}\ f = \\
     \quad\quad\semCons{Lam}\ (\mathrm{fix}\ (\lambda g x.\ f\ (\mathit{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x, g\ x))))\ x))
   \end{array}
 \end{displaymath}
-The first argument to $\mathrm{primrec}$ specifies a functorial
-mapping function that are generated from a syntactic types. For each
-of the syntactic types $\Delta; \Theta \vdash F : \sortType$ defined
-in \autoref{fig:types}, we define a suitable $\mathrm{fmap_F} :
-D^{|\Theta|} \to D \to D$, where $|\Theta|$ is the number of type
-variables in $\Theta$. This definition is presented in
-\autoref{fig:semantic-fmap}.
+The first argument to $\mathrm{primrec}$ is intended to specify a
+functorial mapping function. For each of the syntactic types $\Delta;
+\Theta \vdash F : \sortType$ defined in \autoref{fig:types}, we define
+a suitable $\mathrm{fmap_F} : D^{|\Theta|} \to D \to D$, where
+$|\Theta|$ is the number of type variables in $\Theta$. This
+definition is presented in \autoref{fig:semantic-fmap}.
 
 \begin{figure}[t]
   \begin{eqnarray*}
@@ -211,7 +202,8 @@ language in our untyped model. We now turn to the semantic meaning of
 types, with the aim of showing, in \autoref{sec:semantic-soundness},
 that each well-typed term's interpretation is semantically well-typed.
 
-\subsection{Clock Environments}\label{sec:clock-envs}
+\subsection{Interpretation of clock variables}
+\label{sec:clock-envs}
 
 For a clock context $\Delta$, we define $\clkSem{\Delta}$ to be the
 set of clock environments: mappings from the clock variables in
@@ -224,53 +216,51 @@ $\clkSem\Delta$) if for all $\kappa \in \Delta$, $\delta(\kappa) \leq
 to a natural number stating how much time that clock has left to
 run. The ordering $\delta \sqsubseteq \delta'$ indicates that the
 clocks in $\delta$ have at most as much time left as the clocks in
-$\delta'$.
-% FIXME: syntax for clock environment updates
+$\delta'$. We use the notation $\delta[\kappa \mapsto n]$ to denote
+the clock environment mapping $\kappa$ to $n$ and $\kappa'$ to
+$\delta(\kappa')$ when $\kappa \not= \kappa'$.
 
-\subsection{Semantic Types}\label{sec:semantic-types}
+\subsection{Semantic types}
+\label{sec:semantic-types}
 
-We semantically interpret types as $\clkSem\Delta$-indexed families of
-partial equivalence relations (PERs) over the semantic domain
-$D$. Recall that a PER on $D$ is a binary relation on $D$ that is
-symmetric and transitive, but not necessarily reflexive. Since PERs
+We interpret types as $\clkSem\Delta$-indexed families of partial
+equivalence relations (PERs) over the semantic domain $D$. Recall that
+a PER on $D$ is a binary relation on $D$ that is symmetric and
+transitive, but not necessarily reflexive \cite{mitchell}. Since PERs
 are binary relations, we will treat them as special subsets of the
 cartesian product $D \times D$. We write $\PER(D)$ for the set of all
 partial equivalence relations on $D$, and $\top_D$ for the PER $D
-\times D$. 
-% We are only interested in PERs that are upwards closed
-% with respect to the partial order on $D$. Upwards closure ensures that
-% if a type includes the initial segment of an infinite value, then it
-% includes the remainder of that value. 
-We require that our $\clkSem\Delta$-indexed families of PERs
-contravariantly respect the partial ordering on elements of
+\times D$.  We require that our $\clkSem\Delta$-indexed families of
+PERs contravariantly respect the partial ordering on elements of
 $\clkSem\Delta$. This ensures that, as the time left to run on clocks
-increases, the semantic type becomes ever more precise. Thus when we
+increases, the semantic type becomes ever more precise. Thus, when we
 interpret universal clock quantification as intersection over all
-approximations (see below), we capture the common core of all the
-approximations we have made. Formally, a semantic type for a clock
-context $\Delta$ is a function $A : \clkSem\Delta \to \PER(D)$,
-satisfying contravariant Kripke monotonicity: for all $\delta'
-\sqsubseteq \delta$, $A\delta \subseteq A\delta'$.
+approximations, we capture the common core of all the possible
+approximations.
 
-We write $\ClkPER(\Delta)$ for the collection of all semantic types
-for the clock context $\Delta$. Below, we will also consider morphisms
-between semantic types, and so turn $\ClkPER(\Delta)$ into a
-category. %FIXME: reference to the actual section
+Formally, a semantic type for a clock context $\Delta$ is a function
+$A : \clkSem\Delta \to \PER(D)$, satisfying contravariant Kripke
+monotonicity: for all $\delta' \sqsubseteq \delta$, $A\delta \subseteq
+A\delta'$. We write $\ClkPER(\Delta)$ for the collection of all
+semantic types for the clock context $\Delta$. Below, we will also
+consider morphisms between semantic types, and so turn
+$\ClkPER(\Delta)$ into a category. \fixme{reference to the actual
+  section} Note that we do \emph{not} require that any of our PERs are
+admissible. Admissible PERs always include the pair $(\bot,\bot)$,
+precisely the values we wish to exclude.
 
-% FIXME: maybe say that we definitely do not want relations to be
-% admissible
+We now define semantic counterparts for each of the syntactic type
+constructors we presented in \autoref{sec:types}.
 
 \paragraph{Unit, Product, Coproduct and Function Types}
 
-To interpret the types of our programming language, we must give
-semantic counterparts to each of the syntactic type constructors we
-have used. The basic constructions for unit, product and coproduct
-types are straightforward. The unit type will be interpreted by a
-constant familiy of PERs:
+The constructions for unit, product and coproduct types are
+straightforward. The unit type will be interpreted by a constant
+familiy of PERs:
 \begin{displaymath}
   1\delta = \{(\semCons{Unit}, \semCons{Unit})\}
 \end{displaymath}
-This clearly satisfies the conditions for being a semantic type.
+This trivially satisfies Kripke monotonicity.
 
 Given semantic types $A$ and $B$, their product is defined to be
 \begin{displaymath}
@@ -294,7 +284,7 @@ and their coproduct is
 Since $A$ and $B$ are assumed to be semantic types, it immediately
 follows that $A \times B$ and $A + B$ are semantic types.
 
-To interpret function types, we make use of the typical definition for
+To interpret function types, we use the usual definition for
 Kripke-indexed logical relations, by quantifing over all smaller clock
 environments. Given semantic types $A$ and $B$, we define:
 \begin{displaymath}
@@ -308,21 +298,9 @@ environments. Given semantic types $A$ and $B$, we define:
 It follows by the standard argument for Kripke logical relations that
 this family of PERs is contravariant in clock environments.
 
-% We also
-% need to show that if $(\semCons{Lam}(f_1),\semCons{f_2}) \in (A \to
-% B)\delta$, and $f_1 \sqsubseteq f'_1$ and $f_2 \sqsubseteq f'_2$, then
-% $(\semCons{Lam}(f'_1),\semCons{f'_2}) \in (A \to B)\delta$. This
-% follows because, for all $\delta' \sqsubseteq \delta$ and $(x_1,x_2)
-% \in A\delta'$ such that $(f_1x_1,f_2x_2) \in B\delta'$, we have
-% $f_1x_1 \sqsubseteq f'_1x_1$ and $f_2x_2 \sqsubseteq f'_2x_2$ by the
-% definition of order on elements of $D \to D$. Since $B$ is a semantic
-% type, and so upwards closed, we now know that $(f'_1x_1,f'_2x_2) \in
-% B\delta'$. Thus $(\semCons{Lam}(f'_1),\semCons{Lam}(f'_2)) \in (A \to
-% B)\delta$, as required.
-
-\paragraph{Guarded Types} Given a semantic type $A$, we define the
-semantic delay operation $\delay\kappa$ as follows, where $\kappa$ is
-a member of the clock context $\Delta$:
+\paragraph{Guarded Modality} Given a semantic type $A$, we define the
+semantic guard modality $\delay\kappa$ as follows, where $\kappa$ is a
+member of the clock context $\Delta$:
 \begin{displaymath}
   (\delay\kappa A)\delta = \left\{
     \begin{array}{ll}
@@ -337,12 +315,7 @@ clock environment $\delta$. When the clock has run to zero,
 $\delay\kappa A$ becomes completely uninformative, equating all pairs
 of elements in the semantic domain $D$. If there is time remaining,
 then $\delay\kappa A$ equates a pair iff $A$ would with one fewer
-steps remaining. 
-% For upwards-closure, there are two cases: if
-% $\delta(\kappa) = 0$ then $D$ is trivially upwards-closed; if
-% $\delta(\kappa) = n + 1$, then upwards closure follows from the
-% upwards closure of $A$. 
-For Kripke monotonicity, we want to prove that
+steps remaining. For Kripke monotonicity, we want to prove that
 $(d,d') \in (\delay\kappa A)\delta$ implies $(d,d') \in (\delay\kappa
 A)\delta'$ when $\delta' \sqsubseteq \delta$. If $\delta'(\kappa) = 0$
 then $(\delay\kappa A)\delta' = D \times D \ni (d,d')$. If
@@ -359,17 +332,10 @@ $\ClkPER(\Delta)$. Given a semantic type $A$ in $\ClkPER(\Delta,
 \begin{displaymath}
   \forall_\kappa A = \bigcap_{n \in \mathbb{N}} A(\delta[\kappa \mapsto n])
 \end{displaymath}
-% For upwards closure, $(d_1,d_2) \in (\forall_\kappa. A)\delta$ implies
-% that $(d_1,d_2) \in A(\delta[\kappa \mapsto n])$ for all $n$. If $d_1
-% \sqsubseteq d'_1$ and $d_2 \sqsubseteq d'_2$, then since $A$ is a
-% semantic type, we know that $(d'_1,d'_2) \in A(\delta[\kappa \mapsto
-% n])$ for all $n$. Thus $(d'_1,d'_2) \in (\forall_\kappa. A)\delta$, as
-% required.
-For Kripke monotonicity, if $(d,d') \in
-(\forall\kappa. A)\delta$ then $\forall n.\ (d,d') \in A(\delta[\kappa
-\mapsto n])$. Since $A$ is a semantic type, $\forall n.\ (d,d') \in
-A(\delta'[\kappa \mapsto n])$, hence $(d,d') \in
-(\forall\kappa. A)\delta'$.
+For Kripke monotonicity, if $(d,d') \in (\forall\kappa. A)\delta$ then
+$\forall n.\ (d,d') \in A(\delta[\kappa \mapsto n])$. Since $A$ is a
+semantic type, $\forall n.\ (d,d') \in A(\delta'[\kappa \mapsto n])$,
+hence $(d,d') \in (\forall\kappa. A)\delta'$.
 
 \paragraph{Complete Lattice Structure} In order to define the semantic
 counterpart of the least fixpoint type operator, we make use of the
@@ -399,8 +365,6 @@ demonstrate a semantic well-typedness result for the
 $\mathrm{primrec}$ functon we defined in
 \autoref{sec:semantics-of-programs}.
 
-\fixme{State the lemma in English}
-
 \begin{lemma}\label{lem:primrec-well-typed}
   Let $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$ be a monotone
   function.  Let $\mathrm{fmap} : D \to D \to D$ be such that for all
@@ -415,9 +379,16 @@ $\mathrm{primrec}$ functon we defined in
   \end{displaymath}
 \end{lemma}
 
-\fixme{proof sketch}
+\begin{proof}
+  (Sketch) By induction on the least fixpoint $F(\mu F) = \mu F$,
+  using the Knaster-Tarski theorem.
+\end{proof}
 
-\fixme{forward ref to initial algebra property}
+This lemma only states that our semantic $\mathrm{primrec}$ recursion
+operator is semantically well-typed. We will show in
+\thmref{thm:initial-f-algebra} that $\mathrm{primrec}$ also witnesses
+$\mu F$ as the carrier of the initial $F$-algebra, as we claimed in
+\autoref{sec:main-results-intro}.
 
 \subsection{Interpretation of Syntactic Types}\label{sec:type-interp}
 
@@ -437,22 +408,28 @@ $\mathrm{primrec}$ functon we defined in
   \label{fig:type-interp}
 \end{figure}
 
-An open type $\Delta; \Theta \vdash A : \sortType$ is interpreted as
-monotonic function $\tySem{A} : \ClkPER(\Delta)^{|\Theta|} \to
-\ClkPER(\Delta)$, where $|\Theta|$ denotes the number of type
-variables in $\Theta$. The interpretation is defined in the clauses in
-\autoref{fig:type-interp}. These clauses make use of the constructions
-of semantic types defined in the previous subsection. In the clause
-for $\forall \kappa$, we make use of the ``clock weakening'' operator
-$-\mathord\uparrow_\kappa$ which takes a collection of semantic types
-in $\ClkPER(\Delta)^{|\Theta|}$ to semantic types in
-$\ClkPER(\Delta,\kappa)^{|\Theta|}$ by pointwise restriction of clock
-environments in $\sem{\Delta, \kappa}$ to clock environments in
-$\sem{\Delta}$.
+An well-formed type $\Delta; \Theta \vdash A : \sortType$ is
+interpreted as monotonic function $\tySem{A} :
+\ClkPER(\Delta)^{|\Theta|} \to \ClkPER(\Delta)$, where $|\Theta|$
+denotes the number of type variables in $\Theta$. The interpretation
+is defined in the clauses in \autoref{fig:type-interp}. These clauses
+make use of the constructions of semantic types defined in the
+previous subsection. In the clause for $\forall \kappa$, we make use
+of the ``clock weakening'' operator $-\mathord\uparrow_\kappa$ which
+takes a collection of semantic types in $\ClkPER(\Delta)^{|\Theta|}$
+to semantic types in $\ClkPER(\Delta,\kappa)^{|\Theta|}$ by pointwise
+restriction of clock environments in $\sem{\Delta, \kappa}$ to clock
+environments in $\sem{\Delta}$.
+
+The next lemma states that syntactic substitution and semantic
+substitution commute. The proof is a straightforward induction on the
+well-formed type $A$. Note the side condition that $\kappa \not\in
+\mathit{fc}(A)$, matching the side condition on the
+\TirName{$\kappa$-App} typing rule.
 
 \begin{lemma}\label{lem:substitution-lemma}
   Assume that $\Delta; \Theta \vdash A : \sortType$, $\kappa, \kappa'
-  \in \Delta$ and $\kappa' \not\in \mathit{fv}(A)$. Then for all
+  \in \Delta$ and $\kappa' \not\in \mathit{fc}(A)$. Then for all
   $\delta \in \sem{\Delta[\kappa\mapsto\kappa']}$ and $\theta \in
   \ClkPER(\Delta)^{|\Theta|}$,
   \begin{displaymath}
@@ -460,15 +437,20 @@ $\sem{\Delta}$.
   \end{displaymath}
 \end{lemma}
 
+The syntactic type equality judgement $\Delta; \Theta \vdash A \equiv
+B : \sortType$ that we defined in \autoref{sec:type-equality} is
+interpreted as equality of semantic types. The following lemma states
+that this interpretation is sound.
+
 \begin{lemma}\label{lem:type-equality}
   If $\Delta; \Theta \vdash A \equiv B$ then for all $\theta \in
   \ClkPER(\Delta)^{|\Theta|}$, $\sem{A}\theta = \sem{B}\theta$.
 \end{lemma}
 
-The next lemma ensures that we may use the semantic $\mathrm{fmap_F}$
+The next lemma states that we may use the semantic $\mathrm{fmap_F}$
 functions defined in \autoref{fig:semantic-fmap} with the
-$\mathrm{primrec}$ operator, by showing that each of $\mathrm{fmap_F}$
-satisfies the requirements of \lemref{lem:primrec-well-typed}.
+$\mathrm{primrec}$ operator, by showing that $\mathrm{fmap_F}$ always
+satisfies the hypotheses of \lemref{lem:primrec-well-typed}.
 
 \begin{lemma}\label{lem:sem-fmap-well-typed}
   For all $\Delta; \Theta \vdash F : \sortType$, the $\mathrm{fmap}_F$
@@ -479,24 +461,14 @@ satisfies the requirements of \lemref{lem:primrec-well-typed}.
   \mathrm{fmap_F}\ \vec{g'}\ x') \in FB\delta$.
 \end{lemma}
 
-% \begin{proof}
-%   By induction on the derivation of $\Delta; \Theta \vdash F :
-%   \sortType$. The verifications are very similar to the verifications
-%   required for \thmref{thm:semantic-soundness} below, so we omit them.
-% \end{proof}
-
 \subsection{Semantic Type Soundness}\label{sec:semantic-soundness}
 
-We now show our first main result: the semantic type soundness
-property of our system. To state this result, we must define a
-semantic interpretation of contexts as a clock-environment indexed
-collection of PERs over mappings from variable names in $V$ to
-semantic domain elements in $D$:
+We now state our first main result: the semantic type soundness
+property of our system. To state this result, we define the semantic
+interpretation of contexts as a clock-environment indexed collection
+of PERs over environments:
 \begin{displaymath}
-  \begin{array}{l}
-    \sem{\Gamma}\delta =\\
-    \quad\{(\eta, \eta') \in D^V \times D^V \mathrel| \forall (\ident{x} : A) \in \Gamma.\ (\eta(\ident{x}), \eta'(\ident{x})) \in \sem{A}\delta \}  
-  \end{array}
+  \sem{\Gamma}\delta = \{(\eta, \eta') \mathrel| \forall (\ident{x} : A) \in \Gamma.\ (\eta(\ident{x}), \eta'(\ident{x})) \in \sem{A}\delta \}
 \end{displaymath}
 
 \begin{theorem}\label{thm:semantic-soundness}
@@ -504,6 +476,18 @@ semantic domain elements in $D$:
   \sem{\Delta}$ and $(\eta,\eta') \in \sem{\Gamma}\delta$,
   $(\sem{e}\eta,\sem{e}\eta') \in \sem{A}\delta$.
 \end{theorem}
+
+This theorem has the following corollary, stating the denotation of a
+closed program is never $\bot$; i.e., well-typed programs always terminate.
+\begin{corollary}
+  If $-; - \vdash e : A$ then for all $\eta$, $\sem{e}\eta \not=
+  \bot$.
+\end{corollary}
+When the result type $A$ is the stream type $\forall \kappa. \mu X. B
+\times \delay\kappa X$, we can deduce that the denotation of $e$ will
+always be infinite streams of elements of $B$. We further elaborate
+this point in the next section, showing that this type is exactly the
+carrier of the final $(B \times -)$-coalgebra.
 
 %%% Local Variables:
 %%% TeX-master: "paper"
