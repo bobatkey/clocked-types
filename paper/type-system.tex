@@ -355,32 +355,146 @@ protected by a clock quantification.
 
 Define $\ident{fmap}_F$ for all $F$.
 
-\subsection{Examples}
+\subsection{Programming with guarded types and clocks}
 \label{sec:examples}
 
-\paragraph{Lists and Trees}
-$\mu X. 1 + A \times X$
+\paragraph{Lists and Trees, Finite and Infinite} Using the least
+fixpoint type operator $\mu X. F$, we can reconstruct many of the
+usual inductive data types used in functional programming. For
+example, the OCaml declaration:
+\begin{displaymath}
+  \kw{type}~\tyname{list} = \cons{NilList} \mathrel| \cons{ConsList}~\kw{of}~A\times\tyname{list}
+\end{displaymath}
+of finite lists of values of type $A$, can be expressed as the type
+$\mu X. 1 + A \times X$ in our system, where we have replaced the two
+constructors $\cons{NilList}$ and $\cons{ConsList}$ with a use of the
+sum type former. Likewise, the type of binary trees labelled with $A$s
+that we used in \autoref{sec:repmin} can be written as $\mu X. A + X
+\times X$.
 
-$\mu X. 1 + A \times A \times X$.
+A similar data type declaration in Haskell has a different
+interpretation. If we make the following declaration in Haskell:
+\begin{displaymath}
+  \kw{data}~\tyname{List} = \cons{NilList} \mathrel| \cons{ConsList}~A~\tyname{List}
+\end{displaymath}
+then the type $\tyname{List}$ includes both finite lists of $A$s, and
+infinite lists of $A$s (a similar effect can be achieved in OCaml by
+use of the $\kw{lazy}$ type constructor). Haskell's type system is too
+weak to distinguish the definitely finite from the possibly infinite
+case, and it is often left to the documentation to warn the programmer
+that some functions will be non-productive on infinite lists (for
+example, the $\ident{reverse}$ function).
 
+Making use of Nakano's guard modality $\delay\kappa-$, we are able to
+express Haskell-style possibly infinite lists as the guarded inductive
+type $\mu X. 1 + A \times \delay\kappa A$. As we saw in the
+introduction, infinite lists can be constructed using the guarded
+$\kw{fix}$ operator. For example, the infinite repetition of a fixed
+value can be written in our system as:
+\begin{displaymath}
+  \lambda a. \kw{fix}~(\l. \cons{Cons}~(\kw{inr}~(a,l)))
+\end{displaymath}
+If we restrict ourselves to only one clock variable, and always use
+guarded recursive types, then we obtain a programming language similar
+to a monomorphic Haskell, except with a guarantee that all functions
+are productive.
 
-\paragraph{Streams}
-$\forall \kappa. \mu X. A \times \delay\kappa X$.
+\paragraph{Co-inductive Streams} As we saw in
+\autoref{sec:infinite-to-finite}, programming with guarded types is
+productive, but they are fundamentally incompatible with normal
+inductive types. Recall that if we define infinite streams of $A$s as
+$\tyname{Stream} = \mu X. A \times \delay\kappa X$, then there is no
+way of defining a function $\ident{tail} : \tyname{Stream} \to
+\tyname{Stream}$; the best we can do is $\ident{tail} :
+\tyname{Stream} \to \delay\kappa\tyname{Stream}$. The rest of the
+stream only exists ``tomorrow''.
 
-\paragraph{Stream Eating}
+Clock quantification fixes this problem. We define:
+\begin{displaymath}
+  \tyname{Stream} = \forall \kappa. \mu X. A \times \delay\kappa A
+\end{displaymath}
+Now we can define the two deconstructors for making observations on
+streams:
+\begin{displaymath}
+  \begin{array}{lcl}
+    \ident{head} &:& \tyname{Stream} \to A \\
+    \ident{head} &=& \lambda s. \Lambda \kappa. \elim{primrec}~(\lambda x. \kw{fst}~x)~(s[\kappa]) \\
+    \\
+    \ident{tail} &:& \tyname{Stream} \to \tyname{Stream} \\
+    \ident{tail} &=& \lambda s. \Lambda \kappa. \elim{primrec}~(\lambda x. \kw{snd}~x)~(s[\kappa])
+  \end{array}
+\end{displaymath}
+In the definition of $\ident{head}$ we use the fact that $\kappa$
+cannot appear in $A$ to apply the first type equality rule from
+\autoref{sec:type-equality}.
 
-Example type: $\forall \kappa. \mu X. \mu Y. (I \to Y) + (O \times
-\delay\kappa X)$. Stream eating functions that consume finite amounts
-of input for every output. Should be able to define the application
-and composition operations.
+\paragraph{Stream Processing}
+
+Ghani, Hancock and Pattinson \cite{streameating} define a type of
+representations of continuous functions on streams using a least
+fixpoint type nested within a greatest fixpoint. A continuous function
+on streams is a function that only requires a finite amount of input
+for each output. Ghani \etal's type is expressed in our system as
+follows:
+\begin{displaymath}
+  \tyname{SP}~I~O = \forall \kappa. \mu X. \mu Y. (I \to Y) + (O \times \delay\kappa X)
+\end{displaymath}
+where $\tyname{SP}$ stands for ``Stream Processor'' and $\tyname{I}$
+and $\tyname{O}$ stand for input and output respectively. In this
+type, the outer fixpoint permits the production of infinitely many
+$O$s, due to the guarded occurence of $X$, while the inner fixpoint
+only permits a finite amount of $I$s to be read from the input stream.
+
+Defining the application of an $\tyname{SP}~I~O$ to a stream of $Is$
+serves as an interesting example of programming with guards and
+clocks. We make use of a helper function for unfolding values of type
+$\tyname{SP}~I~O$ that have already been instantiated with some clock:
+\begin{displaymath}
+  \ident{step} : \ident{SP}_\kappa~I~O \to \mu Y. (I \to Y) \times (O \times \delay\kappa(\ident{SP}_\kappa~I~O))
+\end{displaymath}
+where $\ident{SP}_\kappa~I~O$ is $\ident{SP}~I~O$ instantiated with
+the clock $\kappa$.
+
+The definition of stream processor application goes as follows, where
+we permit ourselves a little pattern matching syntactic sugar for
+pairs:
+\begin{displaymath}
+  \begin{array}{@{}l}
+    \ident{apply} : \tyname{SP}~I~O \to \tyname{Stream}~I \to \tyname{Stream}~O \\
+    \ident{apply} = \\
+    \ \begin{array}[t]{@{}l@{}l}
+      \lambda \ident{sp}~\ident{s}.\Lambda \kappa. \kw{fix}(\lambda&\ident{rec}~\ident{sp}~\ident{s}. \\
+      & \elim{primrec}~(\lambda x~s. 
+      \begin{array}[t]{@{}l}
+        \kw{case}~x~\kw{of} \\
+        \quad \kw{inl}~\ident{f}.~\ident{f}~(\ident{head}~\ident{s}) (\ident{tail}~\ident{s}) \\
+        \quad \kw{inr}~(\ident{o},\ident{sp'}).\\
+        \quad \quad \cons{Cons}(o,\ident{rec} \circledast \ident{sp'} \circledast \kw{pure}~s))
+      \end{array} \\
+      & \quad (\ident{step}~\ident{sp})) \\
+      & (\ident{sp}~[\kappa])~s
+    \end{array}
+  \end{array}
+\end{displaymath}
+This function consists of two nested loops. The outer loop, expressed
+using $\kw{fix}$, generates the output stream. This loop is running on
+the clock $\kappa$, introduced by the $\Lambda \kappa$. We have
+instantiated the stream processor with the same clock; this causes the
+steps of the output stream to be in lockstep with the output steps of
+the stream processor, exactly as we might expect. The inner loop,
+expressed using $\elim{primrec}$, recurses over the finite list of
+input instructions from the stream processor, pulling items from the
+input stream as needed. The input stream is \emph{not} instantiated
+with the same clock as the stream processor and the output stream: we
+need to access an arbitrary number of elements from the input stream
+for each step of the stream processor, so their clocks cannot run in
+lockstep.
 
 \paragraph{The Partiality Monad}
 
 $T A = \forall \kappa. \mu X. A + \delay\kappa X$
 
-Escardo?
-
-\paragraph{Circular Programming} Refer back to the replaceMin example.
+Escardo? Danielsson
 
 %%% Local Variables:
 %%% TeX-master: "paper"
