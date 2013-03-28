@@ -242,10 +242,10 @@ Formally, a semantic type for a clock context $\Delta$ is a function
 $A : \clkSem\Delta \to \PER(D)$, satisfying contravariant Kripke
 monotonicity: for all $\delta' \sqsubseteq \delta$, $A\delta \subseteq
 A\delta'$. We write $\ClkPER(\Delta)$ for the collection of all
-semantic types for the clock context $\Delta$. Below, we will also
-consider morphisms between semantic types, and so turn
-$\ClkPER(\Delta)$ into a category. \fixme{reference to the actual
-  section} Note that we do \emph{not} require that any of our PERs are
+semantic types for the clock context $\Delta$. In
+\autoref{sec:fixpoint-types}, we will formally consider morphisms
+between semantic types, and so turn each $\ClkPER(\Delta)$ into a
+category. Note that we do \emph{not} require that any of our PERs are
 admissible. Admissible PERs always include the pair $(\bot,\bot)$,
 precisely the values we wish to exclude.
 
@@ -396,7 +396,7 @@ $\mu F$ as the carrier of the initial $F$-algebra, as we claimed in
   \centering
   \begin{eqnarray*}
     \tySem{1}\theta & = & 1 \\
-    \tySem{X}\theta & = & \theta_X \\
+    \tySem{X}\theta & = & \theta(X) \\
     \tySem{A \times B}\theta & = & \tySem{A}\theta \times \tySem{B}\theta \\
     \tySem{A + B}\theta & = & \tySem{A}\theta + \tySem{B}\theta \\
     \tySem{A \to B}\theta & = & \tySem{A}\emptyset \to \tySem{B}\theta \\
@@ -443,8 +443,9 @@ interpreted as equality of semantic types. The following lemma states
 that this interpretation is sound.
 
 \begin{lemma}\label{lem:type-equality}
-  If $\Delta; \Theta \vdash A \equiv B$ then for all $\theta \in
-  \ClkPER(\Delta)^{|\Theta|}$, $\sem{A}\theta = \sem{B}\theta$.
+  If $\Delta; \Theta \vdash A \equiv B : \sortType$ then for all
+  $\theta \in \ClkPER(\Delta)^{|\Theta|}$, $\sem{A}\theta =
+  \sem{B}\theta$.
 \end{lemma}
 
 The next lemma states that we may use the semantic $\mathrm{fmap_F}$
@@ -460,6 +461,14 @@ satisfies the hypotheses of \lemref{lem:primrec-well-typed}.
   and $(x,x') \in FA\delta$, we have $(\mathrm{fmap_F}\ \vec{g}\ x,
   \mathrm{fmap_F}\ \vec{g'}\ x') \in FB\delta$.
 \end{lemma}
+
+It may seem that could prove this lemma by using the syntactic
+definition of $\ident{fmap}$ from \autoref{fig:fmap-syn} and then
+applying \thmref{thm:semantic-soundness}. However, the semantic
+well-typedness of our definition of the interpretation of
+$\elim{primRec}$ depends on the semantic well-typedness of
+$\mathrm{fmap}$, so we must prove this lemma directly in the model to
+break the circularity.
 
 \subsection{Semantic Type Soundness}\label{sec:semantic-soundness}
 
@@ -477,8 +486,9 @@ of PERs over environments:
   $(\sem{e}\eta,\sem{e}\eta') \in \sem{A}\delta$.
 \end{theorem}
 
-This theorem has the following corollary, stating the denotation of a
-closed program is never $\bot$; i.e., well-typed programs always terminate.
+This theorem has the following corollary, stating that the denotation
+of a closed program is never $\bot$: well-typed programs always yield
+a proper value.
 \begin{corollary}
   If $-; - \vdash e : A$ then for all $\eta$, $\sem{e}\eta \not=
   \bot$.
@@ -486,8 +496,8 @@ closed program is never $\bot$; i.e., well-typed programs always terminate.
 When the result type $A$ is the stream type $\forall \kappa. \mu X. B
 \times \delay\kappa X$, we can deduce that the denotation of $e$ will
 always be infinite streams of elements of $B$. We further elaborate
-this point in the next section, showing that this type is exactly the
-carrier of the final $(B \times -)$-coalgebra.
+this point in the next section, showing that this type is the carrier
+of the final $(B \times -)$-coalgebra.
 
 %%% Local Variables:
 %%% TeX-master: "paper"
