@@ -341,7 +341,7 @@ protected by a clock quantification.
     \end{array}\\
     \ident{fmap}_{A\to F}&\vec{f}&x&=&\lambda a.~\ident{fmap}_F~\vec{f}~(x~a) \\
     \ident{fmap}_{\delay\kappa F}&\vec{f}&x&=&\kw{pure}~(\ident{fmap}_F~\vec{f}) \circledast x \\
-    \ident{fmap}_{\fvecll\kappa.F}&\vec{f}&x&=&\Lambda \kappa. \ident{fmap}_F~\vec{f}~(x[\kappa]) \\
+    \ident{fmap}_{\forall\kappa.F}&\vec{f}&x&=&\Lambda \kappa. \ident{fmap}_F~\vec{f}~(x[\kappa]) \\
     \ident{fmap}_{\mu X. F}&\vec{f}&x&=&\elim{primRec}~(\lambda x. \cons{Cons}(\ident{fmap}_F~\vec{f}~(\lambda x.~\kw{snd}~x)~x))~x      
     \end{array}
   \end{array}
