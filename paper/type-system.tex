@@ -110,7 +110,8 @@ as having the type $\tyname{Integer}$. Intuitively, this is valid
 because a value of type $\tyname{Integer}$ exists independently of any
 clock, therefore we can remove the clock quantification. In general,
 clock quantification commutes with almost all type formers, except for
-guards indexed by the same clock variable. \fixme{Why not force? same reason as for not using type equalities for $\mu$}
+guards indexed by the same clock variable. For those, we must use
+$\kw{force}$.
 
 The following rules are intended to be read as defining a judgement
 $\Delta; \Theta \vdash A \equiv B : \sortType$, indicating that the
@@ -282,9 +283,9 @@ a clock variable context $\Delta$, and a typing context $\Gamma$
 consisting of a list of variable : type pairs: $x_1 : A_1, ..., x_n :
 A_n$. We only consider typing contexts where each type is well-formed
 with respect to the clock variable context $\Delta$, and the
-\emph{empty} type variable context. Similarly, the result type $A$ in
-the typing judgement must be well-formed with respect to $\Delta$ and
-the empty type variable context.
+\emph{empty} type variable context. The result type $A$ in the typing
+judgement must also be well-formed with respect to $\Delta$ and the
+empty type variable context.
 
 We have split the typing rules in \autoref{fig:terms} into five
 groups. The first group includes the standard typing rules for the
@@ -322,7 +323,40 @@ protected by a clock quantification.
 \subsection{Type operators are functorial}
 \label{sec:functorial}
 
-Define $\ident{fmap}_F$ for all $F$.
+\newcommand{\ora}[1]{\overrightarrow{#1}}
+
+\begin{figure}[t]
+  \centering
+\begin{displaymath}
+  \begin{array}{l@{}c@{}c@{}c@{}c@{}l}
+    \ident{fmap}_F : \overrightarrow{(A \to B)} \to F[\overrightarrow{A}] \to F[\overrightarrow{B}] \\
+    \begin{array}{@{}l@{}l@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
+    \ident{fmap}_{A_i}&\vec{f}&x & = & f_i~x \\
+    \ident{fmap}_1    &\vec{f}&x & = & * \\
+    \ident{fmap}_{F \times G}&\vec{f}&x & = & (\ident{fmap}_F~\vec{f}~(\kw{fst}~x), \ident{fmap}_G~\vec{f}~(\kw{snd}~x)) \\
+    \ident{fmap}_{F + G}&\vec{f}&x & = & \kw{case}~x~\kw{of}~
+    \begin{array}[t]{@{}l@{}l}
+      \kw{inl}~y. & \kw{inl}~(\ident{fmap}_F~\vec{f}~y) \\
+      \kw{inr}~z. & \kw{inr}~(\ident{fmap}_G~\vec{f}~z)
+    \end{array}\\
+    \ident{fmap}_{A\to F}&\vec{f}&x&=&\lambda a.~\ident{fmap}_F~\vec{f}~(x~a) \\
+    \ident{fmap}_{\delay\kappa F}&\vec{f}&x&=&\kw{pure}~(\ident{fmap}_F~\vec{f}) \circledast x \\
+    \ident{fmap}_{\fvecll\kappa.F}&\vec{f}&x&=&\Lambda \kappa. \ident{fmap}_F~\vec{f}~(x[\kappa]) \\
+    \ident{fmap}_{\mu X. F}&\vec{f}&x&=&\elim{primRec}~(\lambda x. \cons{Cons}(\ident{fmap}_F~\vec{f}~(\lambda x.~\kw{snd}~x)~x))~x      
+    \end{array}
+  \end{array}
+\end{displaymath}  
+  \caption{$\ident{fmap}_F$ for all type operators $F$}
+  \label{fig:fmap-syn}
+\end{figure}
+
+In \autoref{sec:main-results-intro} we used a functorial mapping
+function $\ident{fmap}_F : (A \to B) \to F[A] \to F[B]$, which we
+claimed was defined for each strictly positive type operator $F$. We
+define this operator by structural recursion on the derivation of $F$,
+using the clauses in \autoref{fig:fmap-syn}. Due to the presence of
+nested least fixpoint types in our calculus, we generalise to the case
+of $n$-ary strictly positive type operators.
 
 \subsection{Programming with guarded types and clocks}
 \label{sec:examples}
@@ -386,12 +420,16 @@ Clock quantification fixes this problem. We define:
 Now we can define the two deconstructors for making observations on
 streams, with the right types:
 \begin{displaymath}
-  \begin{array}{lcl}
+  \begin{array}{@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
     \ident{head} &:& \tyname{Stream}~A \to A \\
-    \ident{head} &=& \lambda s. \Lambda \kappa. \elim{primrec}~(\lambda x. \kw{fst}~x)~(s[\kappa]) \\
+    \ident{head} &=& \lambda s. \Lambda \kappa. \elim{primRec}~(\lambda x. \kw{fst}~x)~(s[\kappa]) \\
     \\
     \ident{tail} &:& \tyname{Stream}~A \to \tyname{Stream}~A \\
-    \ident{tail} &=& \lambda s. \Lambda \kappa. \elim{primrec}~(\lambda x. \kw{snd}~x)~(s[\kappa])
+    \ident{tail} &=& \lambda s. (\kw{force}~(\Lambda \kappa. \elim{primRec}~
+    \begin{array}[t]{@{}l}
+      (\lambda x. \kw{pure}(\lambda x. \kw{fst}~x) \circledast (\kw{snd}~x)) \\
+      (s[\kappa])))
+    \end{array}
   \end{array}
 \end{displaymath}
 In the definition of $\ident{head}$ we use the fact that $\kappa$
@@ -434,7 +472,7 @@ pairs:
     \ident{apply} = \\
     \ \begin{array}[t]{@{}l@{}l}
       \lambda \ident{sp}~\ident{s}.\Lambda \kappa. \kw{fix}(\lambda&\ident{rec}~\ident{sp}~\ident{s}. \\
-      & \elim{primrec}~(\lambda x~s. 
+      & \elim{primRec}~(\lambda x~s.
       \begin{array}[t]{@{}l}
         \kw{case}~x~\kw{of} \\
         \quad \kw{inl}~\ident{f}.~\ident{f}~(\ident{head}~\ident{s}) (\ident{tail}~\ident{s}) \\
@@ -452,7 +490,7 @@ the clock $\kappa$, introduced by the $\Lambda \kappa$. We have
 instantiated the stream processor with the same clock; this causes the
 steps of the output stream to be in lockstep with the output steps of
 the stream processor, exactly as we might expect. The inner loop,
-expressed using $\elim{primrec}$, recurses over the finite list of
+expressed using $\elim{primRec}$, recurses over the finite list of
 input instructions from the stream processor, pulling items from the
 input stream as needed. The input stream is \emph{not} instantiated
 with the same clock as the stream processor and the output stream: we
