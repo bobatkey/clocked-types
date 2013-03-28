@@ -92,15 +92,6 @@ $\delay\kappa A$. The type formation rule for clock quantification is
 very similar to universal type quantification from standard
 polymorphic type theories like System F. 
 
-% However, clock quantification
-% has a very different flavour to type quantification. The type equality
-% rules in \autoref{sec:type-equality} demonstrate that clock
-% quantification is ``computationally irrelevant'' and so commutes with
-% almost all type operators. Moreover, clock instantiation must be
-% linear in order to prevent multiple ``time-streams'' becoming
-% conflated (see the statement of the clock substitution lemma below
-% \fixme{more detail}).
-
 As we described in the introduction in \autoref{sec:clock-vars}, we
 have augmented the Nakano-style delay modality with a clock
 variable. This allows us to distinguish between guardedness with
@@ -313,8 +304,7 @@ for System F-style quantification with non-trivial type equality,
 albeit that in the \TirName{$\kappa$-App} rule the $\kappa'$ clock
 variable cannot already appear in the type. This disallows us from
 using the same clock variable twice, preventing multiple
-``time-streams'' becoming conflated (see the statement of the clock
-substitution lemma below \fixme{more detail}).
+``time-streams'' becoming conflated.
 
 The fourth group of rules state that the clock-indexed guard modality
 supports the $\kw{pure}$ and apply $(\mathord\circledast)$ operations
@@ -382,11 +372,12 @@ are productive.
 \autoref{sec:infinite-to-finite}, programming with guarded types is
 productive, but they are fundamentally incompatible with normal
 inductive types. Recall that if we define infinite streams of $A$s as
-$\tyname{Stream}~A = \mu X. A \times \delay\kappa X$, then there is no
-way of defining a function $\ident{tail} : \tyname{Stream}~A \to
-\tyname{Stream}~A$; the best we can do is $\ident{tail} :
-\tyname{Stream}~A \to \delay\kappa\tyname{Stream}~A$. The rest of the
-stream only exists ``tomorrow''.
+$\tyname{Stream}^\kappa~A = \mu X. A \times \delay\kappa X$, then
+there is no way of defining a function $\ident{tail} :
+\tyname{Stream}^\kappa~A \to \tyname{Stream}^\kappa~A$; the best we
+can do is $\ident{tail} : \tyname{Stream}^\kappa~A \to
+\delay\kappa\tyname{Stream}^\kappa~A$. The rest of the stream only
+exists ``tomorrow''.
 
 Clock quantification fixes this problem. We define:
 \begin{displaymath}
@@ -469,11 +460,71 @@ need to access an arbitrary number of elements from the input stream
 for each step of the stream processor, so their clocks cannot run in
 lockstep.
 
-\paragraph{The Partiality Monad}
+\paragraph{The Partiality Monad} The partiality monad
+\cite{danielsson,XXX} is a well-known coinductively defined monad that
+allows the definition of functions via general recursion, even in a
+total language. The partiality monad is defined as $\tyname{Partial}~A
+= \nu X. A + X$. Hence, a value of type $\tyname{Partial}~A$ consists
+of a stream of $\kw{inr}$s, either continuing forever, or terminating
+in an $\kw{inl}$ with a value of type $A$. Using the partiality monad,
+possibly non-terminating computations can be represented, with
+non-termination represented by an infinite stream that never returns a
+value.
 
-$T A = \forall \kappa. \mu X. A + \delay\kappa X$
+To express the partiality monad in our system, we decompose it into a
+guarded least fixpoint and clock quantification, just as we did for
+streams and stream processors above:
+\begin{displaymath}
+  \begin{array}{l}
+    \tyname{Partial}^\kappa~A = \mu X. A + \delay\kappa X \\
+    \tyname{Partial}~A = \forall \kappa. \tyname{Partial}^\kappa~A
+  \end{array}
+\end{displaymath}
+For convenience, we define two constructors for
+$\tyname{Partial}^\kappa~A$, corresponding to the two components of
+the sum type:
+\begin{displaymath}
+  \begin{array}{l}
+    \ident{now}^\kappa : A \to \tyname{Partial}^\kappa~A \\
+    \ident{now}^\kappa = \lambda a.~\cons{Cons}~(\kw{inl}~a) \\
+    \\
+    \ident{later}^\kappa : \tyname{Partial}^\kappa~A \to \tyname{Partial}^\kappa~A \\
+    \ident{later}^\kappa = \lambda p.~\cons{Cons}~(\kw{inr}~p)
+  \end{array}
+\end{displaymath}
+It is straightforward to use guarded recursion to define the
+$\ident{return}$ and bind functions that demonstrate that
+$\tyname{Partial}$ is indeed a monad. For an example of a possibly
+non-terminating function that can be expressed using the partiality
+monad, we define the following function $\ident{collatz}$. For each
+natural number $n$, this function only terminates if the Collatz
+sequence starting from $n$ reaches $1$. Whether or not this sequence
+reaches $1$ for all $n$ is a famous unsolved question in number
+theory.
+\begin{displaymath}
+  \begin{array}{l}
+    \ident{collatz} : \tyname{Natural} \to \tyname{Partial}~1 \\
+    \ident{collatz} = \lambda n. \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}~\ident{n}.
+    \begin{array}[t]{@{}l}
+      \kw{if}~n = 1~\kw{then}~\ident{now}^\kappa~(*) \\
+      \kw{else}~\kw{if}~n~\ident{mod}~2 = 0~\kw{then} \\
+      \quad \ident{later}^\kappa~(\ident{rec}~(n/2)) \\
+      \kw{else} \\
+      \quad \ident{later}^\kappa~(\ident{rec}~(3*n + 1)))~n
+    \end{array}
+  \end{array}
+\end{displaymath}
 
-Escardo? Danielsson
+The partiality monad is not a drop-in replacement for general
+recursion. The type $\tyname{Partial}~A$ reveals information about the
+number of steps that it takes to compute a value of type
+$A$. Therefore, it is possible to write a timeout function that runs a
+partial computation for a fixed number of steps before giving up:
+\begin{displaymath}
+  \ident{timeout} : \tyname{Natural} \to \tyname{Partial}~A \to \tyname{Partial}~(A + 1)
+\end{displaymath}
+The partiality monad allows us to write possibly non-terminating
+functions, but also allows us to make more observations on them.
 
 %%% Local Variables:
 %%% TeX-master: "paper"
