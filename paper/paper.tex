@@ -77,7 +77,36 @@
 \maketitle
 
 \begin{abstract}
-  
+  Total functional programming offers the beguiling vision that, just
+  by virtue of the compiler accepting a program, we are guaranteed
+  that it will always terminate. In the case of programs that are not
+  intended to terminate, e.g., servers, we are guaranteed that
+  programs will always be \emph{productive}. Productivity means that,
+  even if a program generates an infinite amount of data, each piece
+  will generated in finite time. The theoretical underpinning for
+  productive programming with infinite output is provided by the
+  category theoretic notion of final coalgebras. Hence, we speak of
+  \emph{co}programming with non-well-founded \emph{co}data, as a dual
+  to programming with well-founded data like finite lists and trees.
+
+  Systems that do offer facilities for productive coprogramming, such
+  as the proof assistants Coq and Agda, currently do so through
+  syntactic guardedness checkers. Syntactic guardedness checkers
+  ensure that all self-recursive calls are guarded by a use of a
+  constructor. Such a check ensures productivity. Unfortunately, these
+  syntactic checks are not compositional, and severely complicate
+  coprogramming.
+
+  Guarded recursion, originally due to Nakano, is tantalising as a
+  basis for a flexible and compositional type-based approach to
+  coprogramming. However, as we show, by itself, guarded recursion is
+  not suitable for coprogramming due to the fact that there is no way
+  make finite observations on pieces of infinite data. In this paper,
+  we introduce the concept of \emph{clock variables} that index
+  Nakano's guarded recursion. Clock variables allow us to ``close
+  over'' the generation of infinite data, and to make finite
+  observations, something that is not possible with guarded recursion
+  alone.
 \end{abstract}
 
 \category{D.1.1}{Programming techniques}{Applicative (functional)
@@ -89,14 +118,16 @@
   Languages, Theory, Types, Recursion
 
 \keywords
-  coalgebras, corecursion, guarded recursion, total functional programming, delay modality
+  coalgebras, corecursion, guarded recursion, total functional programming
 
 \input{introduction.tex}
-\input{background.tex}
 \input{type-system.tex}
 \input{semantics.tex}
 \input{fixpoint-types.tex}
 \input{conclusions.tex}
+
+\paragraph{Acknowledgements} We would like to thank Lars Birkedal and
+Rasmus M{\o}gelberg for extremely useful discussions.
 
 \bibliographystyle{plainnat}
 \bibliography{paper}

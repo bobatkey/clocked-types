@@ -45,11 +45,10 @@ there is a unique homomorphism $h : (A,k_A) \to (B,k_B)$.
   carrier of an initial $F$-algebra.
 \end{theorem}
 
-\begin{proof}
-  Since $\mu F$ is a fixpoint of $F$, the morphism $F(\mu F) \to \mu
-  F$ is simply realised by the identity map. Given any other
-  $F$-algebra $(B,k_B)$, define a morphism $\mu F \to B$ using the
-  $\mathrm{primrec}$ operator from
+\begin{proof} (Sketch) Since $\mu F$ is a fixpoint of $F$, the
+  morphism $F(\mu F) \to \mu F$ is simply realised by the identity
+  map. Given any other $F$-algebra $(B,k_B)$, define a morphism $\mu F
+  \to B$ using the $\mathrm{primrec}$ operator from
   \lemref{lem:primrec-well-typed}. Checking that this gives an
   $F$-algebra homomorphism is straightforward, proving uniqueness uses
   induction on elements of $\mu F$, by the Knaster-Tarski theorem.
@@ -80,11 +79,12 @@ unique $F$-coalgebra homomorphism $\mathrm{unfold}~k_A : (A,k_A) \to
 \begin{proof} (Sketch) As for \thmref{thm:initial-f-algebra}, since
   $\mu (F(\delay\kappa-))$ is a fixpoint of $F(\delay\kappa-)$, the
   morphism $F(\mu F) \to \mu F$ is simply realised by the identity
-  map. Given any other $F$-algebra $(A,k_A)$, define a morphism
+  map. Given any other $F$-coalgebra $(A,k_A)$, define a morphism
   $\mathrm{unfold}~k_A : A \to \mu(F(\delay\kappa-))$ as
-  \fixme{FIX}. It is straightforward to prove that this is an
-  $F$-coalgebra homomorphism. Uniqueness is proved for each possible
-  clock environment $\delta$ by induction on $\delta(\kappa)$.
+  $\mathrm{fix}~(\lambda g~a.~\mathrm{fmap}_F~g~(k_A~a))$. It is
+  straightforward to prove that this is an $F$-coalgebra
+  homomorphism. Uniqueness is proved for each possible clock
+  environment $\delta$ by induction on $\delta(\kappa)$.
 \end{proof}
 
 The syntactic counterpart of the construction we used in this proof is
@@ -94,7 +94,7 @@ $\ident{deCons}$ we defined there is semantically equivalent to the
 identity. Therefore, \thmref{thm:final-f-de-coalgebra} substantiates
 the claim we made in \autoref{sec:main-results-intro} that $\mu
 X. F[\delay\kappa-]$ is the syntactic description of the carrier of a
-final $F[\delay-]$-coalgebra.
+final $F[\delay\kappa-]$-coalgebra.
 
 \paragraph{Final Co-Algebras} \thmref{thm:final-f-de-coalgebra} yields
 final coalgebras in the categories $\ClkPER(\Delta, \kappa)$, where we
@@ -109,7 +109,8 @@ $F$-coalgebra, not just the final $F(\delay\kappa-)$-coalgebra.
 \end{theorem}
 
 \begin{proof}
-  Almost identical to the proof for \thmref{thm:final-f-de-coalgebra}.
+  (Sketch) Almost identical to the proof for
+  \thmref{thm:final-f-de-coalgebra}.
 \end{proof}
 
 This final theorem, along with the examples we presented in

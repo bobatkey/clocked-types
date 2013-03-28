@@ -1,25 +1,25 @@
 \section{A denotational semantics for clocks and guards}
 \label{sec:semantics}
 
-We have claimed that by adhering to the typing discipline from the
-previous section, we are guaranteed that programs will be
-productive. We now substantiate this claim by defining a
-domain-theoretic model of our system, and showing that the denotation
-of a well-typed closed term is never $\bot$. We accomplish this by
-using a multiply-step-indexed interpretation of types, where the
-multiple step indexings correspond to the multiple clock variables
-that may be in scope.
+We have claimed that the typing discipline from the previous section
+guarantees that programs will be productive. We now substantiate this
+claim by defining a domain-theoretic model of our system, and showing
+that the denotation of a well-typed closed term is never $\bot$. We
+accomplish this by using a multiply-step-indexed interpretation of
+types, where the multiple step indexings correspond to the multiple
+clock variables that may be in scope.
 
-\subsection{Semantics of Terms}
+\subsection{Semantics of terms}
 \label{sec:semantics-of-programs}
 
 We interpret terms in (a mild extension of) the standard domain
-theoretic model of the untyped lazy $\lambda$-calculus
-\cite{PittsAM:compavm}. A feature of this semantics is the erasure of
-anything to do with the guardedness type constructor $\delay\kappa-$
-and the clock quantification. The $\kw{fix}$ operator is interpreted
-directly as the domain-theoretic fixpoint, i.e., exactly the usual
-interpretation of recursion in functional programming languages.
+theoretic model of the untyped lazy $\lambda$-calculus, described by
+Pitts \cite{PittsAM:compavm}. A feature of this semantics is the
+erasure of anything to do with the guardedness type constructor
+$\delay\kappa-$ and the clock quantification. The $\kw{fix}$ operator
+is interpreted directly as the domain-theoretic fixpoint, i.e.,
+exactly the usual interpretation of recursion in functional
+programming languages.
 
 We assume a directed complete partial order with bottom
 ($\mathrm{DCPO}_\bot$), $D$, satisfying the following recursive domain
@@ -30,11 +30,11 @@ equation:
 where $\oplus$ represents the coalesced sum that identifies the $\bot$
 element of all the components. We are guaranteed to be able to obtain
 such a $D$ by standard results about the category $\mathrm{DCPO}_\bot$
-\cite{smythplotkin}. The five components of the right hand side of
-this equation will be used to carry functions, products, the left and
-right injections for sum types and the unit value respectively. We use
-the following symbols to represent the corresponding continuous
-injective maps into $D$:
+(see, e.g., Smyth and Plotkin \cite{smyth82category}). The five
+components of the right hand side of this equation will be used to
+carry functions, products, the left and right injections for sum types
+and the unit value respectively. We use the following symbols to
+represent the corresponding continuous injective maps into $D$:
 \begin{center}
   \begin{tabular}{ll}
     $\semCons{Lam} : (D \to D) \to D$ & $\semCons{Pair} : D \times D \to D$ \\
@@ -98,7 +98,7 @@ of our system that are just the simply-typed $\lambda$-calculus are
 standard, and displayed in \autoref{fig:semantics1}. It can be easily
 checked that this collection of equations defines a continuous
 function $\sem{-} : (V \to D) \to D$, since everything is built from
-standard parts \cite{mitchell}.
+standard parts.
 
 The applicative functor structure for the guard modality is
 interpreted just as the identity function and normal application, as
@@ -226,14 +226,14 @@ $\delta(\kappa')$ when $\kappa \not= \kappa'$.
 We interpret types as $\clkSem\Delta$-indexed families of partial
 equivalence relations (PERs) over the semantic domain $D$. Recall that
 a PER on $D$ is a binary relation on $D$ that is symmetric and
-transitive, but not necessarily reflexive \cite{mitchell}. Since PERs
-are binary relations, we will treat them as special subsets of the
-cartesian product $D \times D$. We write $\PER(D)$ for the set of all
-partial equivalence relations on $D$, and $\top_D$ for the PER $D
-\times D$.  We require that our $\clkSem\Delta$-indexed families of
-PERs contravariantly respect the partial ordering on elements of
+transitive, but not necessarily reflexive. Since PERs are binary
+relations, we will treat them as special subsets of the cartesian
+product $D \times D$. We write $\PER(D)$ for the set of all partial
+equivalence relations on $D$, and $\top_D$ for the PER $D \times D$.
+We require that our $\clkSem\Delta$-indexed families of PERs
+contravariantly respect the partial ordering on elements of
 $\clkSem\Delta$. This ensures that, as the time left to run on clocks
-increases, the semantic type becomes ever more precise. Thus, when we
+increases, the semantic type becomes ever more precise. When we
 interpret universal clock quantification as intersection over all
 approximations, we capture the common core of all the possible
 approximations.
@@ -256,7 +256,7 @@ constructors we presented in \autoref{sec:types}.
 
 The constructions for unit, product and coproduct types are
 straightforward. The unit type will be interpreted by a constant
-familiy of PERs:
+family of PERs:
 \begin{displaymath}
   1\delta = \{(\semCons{Unit}, \semCons{Unit})\}
 \end{displaymath}
@@ -390,7 +390,7 @@ operator is semantically well-typed. We will show in
 $\mu F$ as the carrier of the initial $F$-algebra, as we claimed in
 \autoref{sec:main-results-intro}.
 
-\subsection{Interpretation of Syntactic Types}\label{sec:type-interp}
+\subsection{Interpretation of syntactic types}\label{sec:type-interp}
 
 \begin{figure}[t]
   \centering
@@ -408,7 +408,7 @@ $\mu F$ as the carrier of the initial $F$-algebra, as we claimed in
   \label{fig:type-interp}
 \end{figure}
 
-An well-formed type $\Delta; \Theta \vdash A : \sortType$ is
+A well-formed type $\Delta; \Theta \vdash A : \sortType$ is
 interpreted as monotonic function $\tySem{A} :
 \ClkPER(\Delta)^{|\Theta|} \to \ClkPER(\Delta)$, where $|\Theta|$
 denotes the number of type variables in $\Theta$. The interpretation
@@ -470,7 +470,8 @@ $\elim{primRec}$ depends on the semantic well-typedness of
 $\mathrm{fmap}$, so we must prove this lemma directly in the model to
 break the circularity.
 
-\subsection{Semantic Type Soundness}\label{sec:semantic-soundness}
+\subsection{Semantic type soundness}
+\label{sec:semantic-soundness}
 
 We now state our first main result: the semantic type soundness
 property of our system. To state this result, we define the semantic
@@ -485,6 +486,16 @@ of PERs over environments:
   \sem{\Delta}$ and $(\eta,\eta') \in \sem{\Gamma}\delta$,
   $(\sem{e}\eta,\sem{e}\eta') \in \sem{A}\delta$.
 \end{theorem}
+
+\begin{proof}
+  (Sketch) By induction on the derivation of $\Delta; \Gamma \vdash e
+  : A$. The most interesting cases are for $\kw{fix}$ and
+  $\elim{primRec}$. In essence, the case for $\kw{fix}$ goes through
+  by induction on the value of the counter assigned to the clock
+  variable $\kappa$ in the current clock environment. The case for
+  $\elim{primRec}$ is given by \lemref{lem:primrec-well-typed} and
+  \lemref{lem:sem-fmap-well-typed}.
+\end{proof}
 
 This theorem has the following corollary, stating that the denotation
 of a closed program is never $\bot$: well-typed programs always yield

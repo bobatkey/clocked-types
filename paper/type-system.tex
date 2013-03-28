@@ -2,14 +2,13 @@
 \label{sec:type-system}
 
 In the introduction, we presented our motivating examples in terms of
-an Haskell-like language informally extended with a Nakano-style guard
-modality and clock quantification. To be able to formally state the
-properties of our combination of clock quantification, clock-indexed
-guard modalities and inductive types, in this section we formally
-define an extension of the simply-typed $\lambda$-calculus with these
-features. In the next section, we define a semantic model for our
-system in which we can formally state the results that we claimed in
-the introduction.
+a Haskell-like language informally extended with a Nakano-style guard
+modality and clock quantification. To formally state the properties of
+our combination of clock quantification, clock-indexed guard
+modalities and inductive types, in this section we define an extension
+of the simply-typed $\lambda$-calculus with these features. In the
+next section, we define a semantics for our system in which we can
+formally state the results that we claimed in the introduction.
 
 \subsection{Well-formed types with clock variables}
 \label{sec:types}
@@ -109,9 +108,9 @@ equality to treat a value of type $\forall \kappa. \tyname{Integer}$
 as having the type $\tyname{Integer}$. Intuitively, this is valid
 because a value of type $\tyname{Integer}$ exists independently of any
 clock, therefore we can remove the clock quantification. In general,
-clock quantification commutes with almost all type formers, except for
-guards indexed by the same clock variable. For those, we must use
-$\kw{force}$.
+clock quantification commutes with almost all strictly positive type
+formers, except for guards indexed by the same clock variable. For
+those, we must use $\kw{force}$.
 
 The following rules are intended to be read as defining a judgement
 $\Delta; \Theta \vdash A \equiv B : \sortType$, indicating that the
@@ -331,7 +330,7 @@ protected by a clock quantification.
   \begin{array}{l@{}c@{}c@{}c@{}c@{}l}
     \ident{fmap}_F : \overrightarrow{(A \to B)} \to F[\overrightarrow{A}] \to F[\overrightarrow{B}] \\
     \begin{array}{@{}l@{}l@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
-    \ident{fmap}_{A_i}&\vec{f}&x & = & f_i~x \\
+    \ident{fmap}_{X_i}&\vec{f}&x & = & f_i~x \\
     \ident{fmap}_1    &\vec{f}&x & = & * \\
     \ident{fmap}_{F \times G}&\vec{f}&x & = & (\ident{fmap}_F~\vec{f}~(\kw{fst}~x), \ident{fmap}_G~\vec{f}~(\kw{snd}~x)) \\
     \ident{fmap}_{F + G}&\vec{f}&x & = & \kw{case}~x~\kw{of}~
@@ -420,15 +419,19 @@ Clock quantification fixes this problem. We define:
 Now we can define the two deconstructors for making observations on
 streams, with the right types:
 \begin{displaymath}
-  \begin{array}{@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
-    \ident{head} &:& \tyname{Stream}~A \to A \\
-    \ident{head} &=& \lambda s. \Lambda \kappa. \elim{primRec}~(\lambda x. \kw{fst}~x)~(s[\kappa]) \\
+  \begin{array}{@{}l}
+    \begin{array}{@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
+      \defn{head} &:& \tyname{Stream}~A \to A \\
+      \defn{head} &=& \lambda s. \Lambda \kappa. \elim{primRec}~(\lambda x. \kw{fst}~x)~(s[\kappa]) \\
+    \end{array}\\
     \\
-    \ident{tail} &:& \tyname{Stream}~A \to \tyname{Stream}~A \\
-    \ident{tail} &=& \lambda s. (\kw{force}~(\Lambda \kappa. \elim{primRec}~
-    \begin{array}[t]{@{}l}
-      (\lambda x. \kw{pure}(\lambda x. \kw{fst}~x) \circledast (\kw{snd}~x)) \\
-      (s[\kappa])))
+    \begin{array}{@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
+      \defn{tail} &:& \tyname{Stream}~A \to \tyname{Stream}~A \\
+      \defn{tail} &=& \lambda s. (\kw{force}~(\Lambda \kappa. \elim{primRec}~
+      \begin{array}[t]{@{}l}
+        (\lambda x. \kw{pure}(\lambda x. \kw{fst}~x) \circledast (\kw{snd}~x)) \\
+        (s[\kappa])))
+      \end{array}
     \end{array}
   \end{array}
 \end{displaymath}
@@ -438,12 +441,12 @@ cannot appear in $A$ to apply the first type equality rule from
 
 \paragraph{Stream Processing}
 
-Ghani, Hancock and Pattinson \cite{streameating} define a type of
-representations of continuous functions on streams using a least
-fixpoint type nested within a greatest fixpoint. A continuous function
-on streams is a function that only requires a finite amount of input
-for each element of the output. Ghani \etal's type is expressed in our
-system as follows:
+Ghani, Hancock and Pattinson \cite{ghani09representations} define a
+type of representations of continuous functions on streams using a
+least fixpoint type nested within a greatest fixpoint. A continuous
+function on streams is a function that only requires a finite amount
+of input for each element of the output. Ghani \etal's type is
+expressed in our system as follows:
 \begin{displaymath}
   \tyname{SP}~I~O = \forall \kappa. \mu X. \mu Y. (I \to Y) + (O \times \delay\kappa X)
 \end{displaymath}
@@ -451,16 +454,19 @@ where $\tyname{SP}$ stands for ``Stream Processor'' and $\tyname{I}$
 and $\tyname{O}$ stand for input and output respectively. In this
 type, the outer fixpoint permits the production of infinitely many
 $O$s, due to the guarded occurence of $X$, while the inner fixpoint
-only permits a finite amount of $I$s to be read from the input stream.
+only permits a finite amount of $I$s to be read from the input
+stream. This kind of nested fixpoint is not expressible within Coq,
+but is possible with Agda's support for coinductive types
+\cite{danielsson09mixing}.
 
 Defining the application of an $\tyname{SP}~I~O$ to a stream of $Is$
 serves as an interesting example of programming with guards and
 clocks. We make use of a helper function for unfolding values of type
 $\tyname{SP}~I~O$ that have already been instantiated with some clock:
 \begin{displaymath}
-  \ident{step} : \ident{SP}_\kappa~I~O \to \mu Y. (I \to Y) \times (O \times \delay\kappa(\ident{SP}_\kappa~I~O))
+  \defn{step} : \ident{SP}^\kappa~I~O \to \mu Y. (I \to Y) \times (O \times \delay\kappa(\ident{SP}^\kappa~I~O))
 \end{displaymath}
-where $\ident{SP}_\kappa~I~O$ is $\ident{SP}~I~O$ instantiated with
+where $\ident{SP}^\kappa~I~O$ is $\ident{SP}~I~O$ instantiated with
 the clock $\kappa$.
 
 The definition of stream processor application goes as follows, where
@@ -468,8 +474,8 @@ we permit ourselves a little pattern matching syntactic sugar for
 pairs:
 \begin{displaymath}
   \begin{array}{@{}l}
-    \ident{apply} : \tyname{SP}~I~O \to \tyname{Stream}~I \to \tyname{Stream}~O \\
-    \ident{apply} = \\
+    \defn{apply} : \tyname{SP}~I~O \to \tyname{Stream}~I \to \tyname{Stream}~O \\
+    \defn{apply} = \\
     \ \begin{array}[t]{@{}l@{}l}
       \lambda \ident{sp}~\ident{s}.\Lambda \kappa. \kw{fix}(\lambda&\ident{rec}~\ident{sp}~\ident{s}. \\
       & \elim{primRec}~(\lambda x~s.
@@ -498,16 +504,16 @@ need to access an arbitrary number of elements from the input stream
 for each step of the stream processor, so their clocks cannot run in
 lockstep.
 
-\paragraph{The Partiality Monad} The partiality monad
-\cite{danielsson,XXX} is a well-known coinductively defined monad that
-allows the definition of functions via general recursion, even in a
-total language. The partiality monad is defined as $\tyname{Partial}~A
-= \nu X. A + X$. Hence, a value of type $\tyname{Partial}~A$ consists
-of a stream of $\kw{inr}$s, either continuing forever, or terminating
-in an $\kw{inl}$ with a value of type $A$. Using the partiality monad,
-possibly non-terminating computations can be represented, with
-non-termination represented by an infinite stream that never returns a
-value.
+\paragraph{The Partiality Monad} The partiality monad is a well-known
+coinductively defined monad that allows the definition of functions
+via general recursion, even in a total language. The partiality monad
+is defined as $\tyname{Partial}~A = \nu X. A + X$. Hence, a value of
+type $\tyname{Partial}~A$ consists of a stream of $\kw{inr}$s, either
+continuing forever, or terminating in an $\kw{inl}$ with a value of
+type $A$. Using the partiality monad, possibly non-terminating
+computations can be represented, with non-termination represented by
+an infinite stream that never returns a value. Capretta
+\cite{capretta05general} gives a detailed description.
 
 To express the partiality monad in our system, we decompose it into a
 guarded least fixpoint and clock quantification, just as we did for
@@ -523,26 +529,26 @@ $\tyname{Partial}^\kappa~A$, corresponding to the two components of
 the sum type:
 \begin{displaymath}
   \begin{array}{l}
-    \ident{now}^\kappa : A \to \tyname{Partial}^\kappa~A \\
-    \ident{now}^\kappa = \lambda a.~\cons{Cons}~(\kw{inl}~a) \\
+    \defn{now}^\kappa : A \to \tyname{Partial}^\kappa~A \\
+    \defn{now}^\kappa = \lambda a.~\cons{Cons}~(\kw{inl}~a) \\
     \\
-    \ident{later}^\kappa : \tyname{Partial}^\kappa~A \to \tyname{Partial}^\kappa~A \\
-    \ident{later}^\kappa = \lambda p.~\cons{Cons}~(\kw{inr}~p)
+    \defn{later}^\kappa : \tyname{Partial}^\kappa~A \to \tyname{Partial}^\kappa~A \\
+    \defn{later}^\kappa = \lambda p.~\cons{Cons}~(\kw{inr}~p)
   \end{array}
 \end{displaymath}
-It is straightforward to use guarded recursion to define the
-$\ident{return}$ and bind functions that demonstrate that
-$\tyname{Partial}$ is indeed a monad. For an example of a possibly
-non-terminating function that can be expressed using the partiality
-monad, we define the following function $\ident{collatz}$. For each
-natural number $n$, this function only terminates if the Collatz
-sequence starting from $n$ reaches $1$. Whether or not this sequence
-reaches $1$ for all $n$ is a famous unsolved question in number
-theory.
+It is straightforward to use guarded recursion and clock
+quantification to define the $\ident{return}$ and bind functions that
+demonstrate that $\tyname{Partial}$ is indeed a monad. For an example
+of a possibly non-terminating function that can be expressed using the
+partiality monad, we define the following function
+$\ident{collatz}$. For each natural number $n$, this function only
+terminates if the Collatz sequence starting from $n$ reaches
+$1$. Whether or not this sequence reaches $1$ for all $n$ is a famous
+unsolved question in number theory.
 \begin{displaymath}
   \begin{array}{l}
-    \ident{collatz} : \tyname{Natural} \to \tyname{Partial}~1 \\
-    \ident{collatz} = \lambda n. \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}~\ident{n}.
+    \defn{collatz} : \tyname{Natural} \to \tyname{Partial}~1 \\
+    \defn{collatz} = \lambda n. \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}~\ident{n}.
     \begin{array}[t]{@{}l}
       \kw{if}~n = 1~\kw{then}~\ident{now}^\kappa~(*) \\
       \kw{else}~\kw{if}~n~\ident{mod}~2 = 0~\kw{then} \\
@@ -559,7 +565,7 @@ number of steps that it takes to compute a value of type
 $A$. Therefore, it is possible to write a timeout function that runs a
 partial computation for a fixed number of steps before giving up:
 \begin{displaymath}
-  \ident{timeout} : \tyname{Natural} \to \tyname{Partial}~A \to \tyname{Partial}~(A + 1)
+  \defn{timeout} : \tyname{Natural} \to \tyname{Partial}~A \to A + 1
 \end{displaymath}
 The partiality monad allows us to write possibly non-terminating
 functions, but also allows us to make more observations on them.
