@@ -1,43 +1,121 @@
-\section{Equational Properties of Fixpoint Types}
+\section{Properties of fixpoint types}
 \label{sec:fixpoint-types}
 
-\begin{enumerate}
-\item Talk about using the PER semantics for equational reasoning, via
-  the adequate model of the lazy lambda calculus
-\item Show that $\mu F$ is the initial algebra of $F$
-\item Show that $\mu F(\delay\kappa-)$ is the final coalgebra of $F(\delay\kappa -)$
-\item Show that $\forall \kappa. \mu F(\delay\kappa -)$ is the final
-  coalgebra of $F$.
-\end{enumerate}
+Using the denotational model of the previous section, we are now in a
+position to formally state and sketch the proofs of the properties of
+fixpoint types that we claimed in
+\autoref{sec:main-results-intro}. Our claimed results are statements
+in category theoretic language about the initiality and finality of
+various (co)algebras. Therefore, we first construct suitable
+categories to work in.
+
+\begin{definition}
+  For each clock variable context $\Delta$, the category
+  $\ClkPER(\Delta)$ has as objects semantic types over
+  $\Delta$. Morphisms $f : A \to B$ are continuous functions $f : D
+  \to D$ such that for all $\delta \in \sem{\Delta}$ and $(a,a') \in
+  A\delta$, $(fa, fa') \in B\delta$. Two morphisms $f$,$f'$ are
+  considered equivalent if for all $\delta \in \sem{\Delta}$ and
+  $(a,a') \in A\delta$, $(fa, f'a') \in B\delta$.
+\end{definition}
+
+Each well-typed term $\Delta; x : A \vdash e : B$ defines a morphism
+$\sem{e} : \sem{A} \to \sem{B}$ in $\ClkPER(\Delta)$. We can define
+equality between terms in our syntactic type system in terms of the
+equality on morphisms in this definition. Moreover, each well-formed
+type operator $\Delta; X \vdash F[X] : \sortType$ defines a (strong)
+endofunctor on $\ClkPER(\Delta)$, using the semantic $\mathrm{fmap}_F$
+defined in \autoref{fig:semantic-fmap} to define the action on
+morphisms. We have already checked (\lemref{lem:sem-fmap-well-typed})
+that this is well-defined, and it is straightforward to check that the
+usual functor laws hold. It what follows, we will use
+$\mathit{fmap}_F$ to refer to the action of a functor $F$ on
+morphisms.
+
+\paragraph{Initial Algebras} Recall that, for any functor $F$, an
+$F$-algebra is a pair of an object $A$ and a morphism $k : FA \to
+A$. A homomorphism $h$ between two $F$-algebras $(A,k_A)$ and
+$(B,k_B)$ is a morphism $h : A \to B$ such that $h \circ k_A = k_B
+\circ \mathit{fmap}_F~h$. An \emph{initial} $F$-algebra is an
+$F$-algebra $(A,k_A)$ such that for any other $F$-algebra $(B,k_B)$,
+there is a unique homomorphism $h : (A,k_A) \to (B,k_B)$.
 
 \begin{theorem}\label{thm:initial-f-algebra}
-  For a strong functor $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$, $\mu
-  F$ is the carrier of an initial $F$-algebra.
+  If $F$ is an endofunctor on $\ClkPER(\Delta)$, then $\mu F$ is the
+  carrier of an initial $F$-algebra.
 \end{theorem}
 
 \begin{proof}
-  By using the fixpoint property of the definition of $\mu F$.
+  Since $\mu F$ is a fixpoint of $F$, the morphism $F(\mu F) \to \mu
+  F$ is simply realised by the identity map. Given any other
+  $F$-algebra $(B,k_B)$, define a morphism $\mu F \to B$ using the
+  $\mathrm{primrec}$ operator from
+  \lemref{lem:primrec-well-typed}. Checking that this gives an
+  $F$-algebra homomorphism is straightforward, proving uniqueness uses
+  induction on elements of $\mu F$, by the Knaster-Tarski theorem.
 \end{proof}
+
+\paragraph{Guarded Final Co-Algebras} \thmref{thm:initial-f-algebra}
+applies to all functors $F$, and in particular functors of the form
+$F(\delay\kappa-)$ on the category $\ClkPER(\Delta, \kappa)$. For
+these functors, as well as $\mu (F(\delay\kappa -))$ being the carrier
+of an initial algebra, it is also the carrier of a final
+$F(\delay\kappa-)$-coalgebra.
+
+Coalgebras are the formal dual of algebras: for an endofunctor $F$, an
+$F$-coalgebra is a pair of an object $A$ and a morphism $k_A : A \to
+FA$. A homomorphism $h : (A,k_A) \to (B,k_B)$ of coalgebras is a
+morphism $h : A \to B$ such that $\mathit{fmap}_F~h \circ k_A =
+k_B\circ h$. A \emph{final} $F$-coalgebra is an $F$-coalgebra
+$(B,k_B)$ such that for any other $F$-coalgebra $(A,k_A)$, there is a
+unique $F$-coalgebra homomorphism $\mathrm{unfold}~k_A : (A,k_A) \to
+(B,k_B)$.
 
 \begin{theorem}\label{thm:final-f-de-coalgebra}
-  For a strong functor $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$, $\mu
-  (F \circ \delay\kappa) \in \ClkPER(\Delta,\kappa)$ is the carrier of a final $(F \circ
-  \delay\kappa)$-coalgebra.
+  If $F$ is an endofunctor on $\ClkPER(\Delta)$, then $\mu
+  (F(\delay\kappa-))$ is the carrier of a final
+  $F(\delay\kappa-)$-coalgebra in $\ClkPER(\Delta,\kappa)$.
 \end{theorem}
 
-\begin{proof}
-  By induction on $\delta(\kappa)$.
+\begin{proof} (Sketch) As for \thmref{thm:initial-f-algebra}, since
+  $\mu (F(\delay\kappa-))$ is a fixpoint of $F(\delay\kappa-)$, the
+  morphism $F(\mu F) \to \mu F$ is simply realised by the identity
+  map. Given any other $F$-algebra $(A,k_A)$, define a morphism
+  $\mathrm{unfold}~k_A : A \to \mu(F(\delay\kappa-))$ as
+  \fixme{FIX}. It is straightforward to prove that this is an
+  $F$-coalgebra homomorphism. Uniqueness is proved for each possible
+  clock environment $\delta$ by induction on $\delta(\kappa)$.
 \end{proof}
+
+The syntactic counterpart of the construction we used in this proof is
+exactly the term we used in \autoref{sec:main-results-intro} for the
+definition of $\ident{unfold}$. It is also easy to check that the term
+$\ident{deCons}$ we defined there is semantically equivalent to the
+identity. Therefore, \thmref{thm:final-f-de-coalgebra} substantiates
+the claim we made in \autoref{sec:main-results-intro} that $\mu
+X. F[\delay\kappa-]$ is the syntactic description of the carrier of a
+final $F[\delay-]$-coalgebra.
+
+\paragraph{Final Co-Algebras} \thmref{thm:final-f-de-coalgebra} yields
+final coalgebras in the categories $\ClkPER(\Delta, \kappa)$, where we
+have a spare clock variable. By using clock quantification, we can
+close over this spare clock variable, and so obtain the final
+$F$-coalgebra, not just the final $F(\delay\kappa-)$-coalgebra.
 
 \begin{theorem}\label{thm:final-f-coalgebra}
-  For a strong functor $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$,
-  $\forall_\kappa. \mu (F \circ \delay\kappa)$ is the carrier of a
-  final $F$-coalgebra.
+  For an endofunctor $F$ on $\ClkPER(\Delta)$, $\forall_\kappa. \mu
+  (F(\delay\kappa-))$ is the carrier of a final $F$-coalgebra in
+  $\ClkPER(\Delta)$.
 \end{theorem}
 
 \begin{proof}
-  By induction on $\delta(\kappa)$.
+  Almost identical to the proof for \thmref{thm:final-f-de-coalgebra}.
 \end{proof}
+
+This final theorem, along with the examples we presented in
+\autoref{sec:examples}, substantiates our claim that the combination
+of clocks and guards that we have presented in this paper is a viable
+and comfortable setting in which to productively coprogram.
 
 %%% Local Variables:
 %%% TeX-master: "paper"
