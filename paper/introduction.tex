@@ -415,6 +415,60 @@ observation of a piece of infinite data:
   \end{array}
 \end{displaymath}
 
+Clock variables also allow us to make clear in the types fine
+distinctions between functions that are extensionally equal, but
+differ in their productivity. In plain Haskell, the following two
+stream mapping functions have the same behaviour on any
+\emph{completely constructed} stream. The first $\ident{map}$
+processes each element one at a time
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{map}~f~s = \cons{StreamCons}~(f~x)~(\ident{map}~f~s') \\
+    \quad \kw{where}~(\ident{x}, \ident{s'}) = \elim{deStreamCons}~s
+  \end{array}
+\end{displaymath}
+while $\ident{maap}$ processes elements two at a time:
+\begin{displaymath}
+  \begin{array}{@{}l}
+    \defn{maap}~f~s = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~s'') \\
+    \quad \kw{where}~(\ident{x}, \ident{s'}) = \elim{deStreamCons}~s;~(\ident{y}, \ident{s''}) = \elim{deStreamCons}~s'
+  \end{array}
+\end{displaymath}
+If all the elements of the input are available at once, then
+$\ident{map}$ and $\ident{maap}$ have the same behaviour. However, if
+these functions are passed streams that are still being constructed,
+then their behaviour can differ significantly. Consider these two
+definitions of a stream of natural numbers, using $\ident{map}$ and $\ident{maap}$:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{nats} = \cons{StreamCons}~0~(\ident{map}~(\lambda x.~x+1)~\ident{nats})\\
+    \defn{nats'} = \cons{StreamCons}~0~(\ident{maap}~(\lambda x.~x+1)~\ident{nats'})
+  \end{array}  
+\end{displaymath}
+Running $\ident{nats}$ produces the infinite stream of natural
+numbers, as expected, but running $\ident{nats'}$ produces
+nothing. The function $\ident{maap}$ expects two elements to be
+available on its input stream, while $\ident{nats'}$ has only provided
+one.
+
+Even though $\ident{map}$ and $\ident{maap}$ are extensionally equal,
+they have different behaviour on partially constructed streams. We can
+state this different behaviour using the following types in our system:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{map} :: \forall \kappa. (\tyname{Integer} \to \tyname{Integer}) \to \tyname{Stream}^\kappa \to \tyname{Stream}^\kappa \\
+    \defn{maap} :: (\tyname{Integer} \to \tyname{Integer}) \to (\forall \kappa. \tyname{Stream}^\kappa) \to (\forall \kappa. \tyname{Stream}^\kappa)
+  \end{array}
+\end{displaymath}
+Thus, $\ident{map}$'s type states that the input stream and output
+stream run on the same clock $\kappa$, so each element of the output
+will only require one element of the input. This is exactly what
+$\ident{nats}$ requires, and our type system will accept the
+definition of $\ident{nats}$. In contrast, $\ident{maap}$'s type
+states that it requires a fully constructed stream as input. The
+definition of $\ident{nats'}$ does not provide this, and so our type
+system will reject it.
+
 By using clock quantification to ``close over'' the guardedness, our
 approach thus \emph{localises} the discipline which makes the
 productivity of definitions plain, without affecting the types at
