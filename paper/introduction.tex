@@ -257,9 +257,9 @@ lead to productive definitions.
     \defn{mergef} :: (\tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}) \to \\
     \textcolor{white}{\textrm{mergef} :: }\ \tyname{Stream} \to \tyname{Stream} \to \tyname{Stream} \\
     \defn{mergef}\ \ident{f} = \kw{fix}\ (\lambda \ident{g}\ \ident{xs}\ \ident{ys}. \\
-    \hspace{2.5cm} \kw{let}\ (\ident{x}, \ident{xs'}) = \elim{deStreamCons}\ \ident{xs} \\
-    \hspace{2.5cm} \textcolor{white}{\kw{let}\ }(\ident{y}, \ident{ys'}) = \elim{deStreamCons}\ \ident{ys} \\
-    \hspace{2.5cm} \kw{in}\ \ident{f}\ \ident{x}\ \ident{y}\ (\ident{g} \circledast \ident{xs'} \circledast \ident{ys'}))
+    \hspace{2.5cm} \kw{let}\ (\ident{x}, \ident{xs$'$}) = \elim{deStreamCons}\ \ident{xs} \\
+    \hspace{2.5cm} \textcolor{white}{\kw{let}\ }(\ident{y}, \ident{ys$'$}) = \elim{deStreamCons}\ \ident{ys} \\
+    \hspace{2.5cm} \kw{in}\ \ident{f}\ \ident{x}\ \ident{y}\ (\ident{g} \circledast \ident{xs$'$} \circledast \ident{ys$'$}))
   \end{array}
 \end{displaymath}
 Aside from the explicit uses of $\kw{fix}$ and $\elim{deStreamCons}$,
@@ -299,11 +299,11 @@ which we have \colorbox{greybg}{highlighted}.
   \begin{array}{l}
     \defn{take} :: \tyname{Natural} \to \tyname{Stream} \to [\tyname{Integer}] \\
     \defn{take}\ 0\ \ident{s} = [] \\
-    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \colorbox{greybg}{$\ident{s'}$} \\
-    \quad \kw{where}\ (\ident{x}, \ident{s'}) = \elim{deStreamCons}\ \ident{s}
+    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \colorbox{greybg}{$\ident{s$'$}$} \\
+    \quad \kw{where}\ (\ident{x}, \ident{s$'$}) = \elim{deStreamCons}\ \ident{s}
   \end{array}
 \end{displaymath}
-The problem is that the variable $\ident{s'}$, which we have obtained
+The problem is that the variable $\ident{s$'$}$, which we have obtained
 from $\elim{deStreamCons}$, has type $\rhd\tyname{Stream}$. However,
 to invoke the $\ident{take}$ function structurally recursively, we
 need something of type $\tyname{Stream}$, without the guardedness
@@ -410,8 +410,8 @@ observation of a piece of infinite data:
   \begin{array}{l}
     \defn{take} :: \tyname{Natural} \to (\forall \kappa. \tyname{Stream}^\kappa) \to [\tyname{Integer}] \\
     \defn{take}\ 0\ \ident{s} = [] \\
-    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \ident{s'} \\
-    \quad \kw{where}\ (\ident{x}, \ident{s'}) = \elim{deStreamCons}\ \ident{s}
+    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \ident{s$'$} \\
+    \quad \kw{where}\ (\ident{x}, \ident{s$'$}) = \elim{deStreamCons}\ \ident{s}
   \end{array}
 \end{displaymath}
 
@@ -424,14 +424,14 @@ processes each element one at a time
 \begin{displaymath}
   \begin{array}{l}
     \defn{map}~f~s = \cons{StreamCons}~(f~x)~(\ident{map}~f~s') \\
-    \quad \kw{where}~(\ident{x}, \ident{s'}) = \elim{deStreamCons}~s
+    \quad \kw{where}~(\ident{x}, \ident{s$'$}) = \elim{deStreamCons}~s
   \end{array}
 \end{displaymath}
 while $\ident{maap}$ processes elements two at a time:
 \begin{displaymath}
   \begin{array}{@{}l}
-    \defn{maap}~f~s = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~s'') \\
-    \quad \kw{where}~(\ident{x}, \ident{s'}) = \elim{deStreamCons}~s;~(\ident{y}, \ident{s''}) = \elim{deStreamCons}~s'
+    \defn{maap}~f~s = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~(\ident{maap}~f~s'')) \\
+    \quad \kw{where}~(\ident{x}, \ident{s$'$}) = \elim{deStreamCons}~s;~(\ident{y}, \ident{s$''$}) = \elim{deStreamCons}~s'
   \end{array}
 \end{displaymath}
 If all the elements of the input are available at once, then
@@ -442,14 +442,14 @@ definitions of a stream of natural numbers, using $\ident{map}$ and $\ident{maap
 \begin{displaymath}
   \begin{array}{l}
     \defn{nats} = \cons{StreamCons}~0~(\ident{map}~(\lambda x.~x+1)~\ident{nats})\\
-    \defn{nats'} = \cons{StreamCons}~0~(\ident{maap}~(\lambda x.~x+1)~\ident{nats'})
-  \end{array}  
+    \defn{badnats} = \cons{StreamCons}~0~(\ident{maap}~(\lambda x.~x+1)~\ident{badnats})
+  \end{array}
 \end{displaymath}
 Running $\ident{nats}$ produces the infinite stream of natural
-numbers, as expected, but running $\ident{nats'}$ produces
+numbers, as expected, but running $\ident{badnats}$ produces
 nothing. The function $\ident{maap}$ expects two elements to be
-available on its input stream, while $\ident{nats'}$ has only provided
-one.
+available on its input stream, while $\ident{badnats}$ has only
+provided one.
 
 Even though $\ident{map}$ and $\ident{maap}$ are extensionally equal,
 they have different behaviour on partially constructed streams. We can
@@ -466,7 +466,7 @@ will only require one element of the input. This is exactly what
 $\ident{nats}$ requires, and our type system will accept the
 definition of $\ident{nats}$. In contrast, $\ident{maap}$'s type
 states that it requires a fully constructed stream as input. The
-definition of $\ident{nats'}$ does not provide this, and so our type
+definition of $\ident{badnats}$ does not provide this, and so our type
 system will reject it.
 
 By using clock quantification to ``close over'' the guardedness, our
@@ -610,13 +610,13 @@ is written as follows:
 \begin{displaymath}
   \begin{array}{l}
     \defn{replaceMin} :: \tyname{Tree} \to \tyname{Tree} \\
-    \defn{replaceMin}\ \ident{t} = \kw{let}\ (\ident{t'}, \ident{m}) = \ident{replaceMinBody}\ \ident{t}\ \ident{m}\ \kw{in}\ \ident{t'} \\
+    \defn{replaceMin}\ \ident{t} = \kw{let}\ (\ident{t$'$}, \ident{m}) = \ident{replaceMinBody}\ \ident{t}\ \ident{m}\ \kw{in}\ \ident{t$'$} \\
     \hspace{0.6cm} \kw{where} \\
     \hspace{1cm} \defn{replaceMinBody}\ (\cons{Leaf}\ \ident{x})\ \ident{m} = (\cons{Leaf}\ \ident{m}, \ident{x}) \\
     \hspace{1cm} \defn{replaceMinBody}\ (\cons{Br}\ \ident{l}\ \ident{r})\ \ident{m} = \\
-    \hspace{2cm} \kw{let}\ (\ident{l'}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
-    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r'}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
-    \hspace{2cm} \kw{in}\ (\cons{Br}\ \ident{l'}\ \ident{r'},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+    \hspace{2cm} \kw{let}\ (\ident{l$'$}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
+    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r$'$}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
+    \hspace{2cm} \kw{in}\ (\cons{Br}\ \ident{l$'$}\ \ident{r$'$},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
   \end{array}
 \end{displaymath}
 The interesting part of this function is the first $\kw{let}$
@@ -672,9 +672,9 @@ changes from the previous definition.
     \defn{replaceMinBody} :: \tyname{Tree} \to \hlchangem{\forall \kappa.}\hlchangem{\delay\kappa}\tyname{Integer} \to (\hlchangem{\delay\kappa}\tyname{Tree},\tyname{Integer}) \\
     \hspace{0cm} \defn{replaceMinBody}\ (\cons{Leaf}\ \ident{x})\ \ident{m} = (\hlchangem{\kw{pure}}\cons{Leaf}\ \hlchangem{\circledast}\ident{m}, \ident{x}) \\
     \hspace{0cm} \defn{replaceMinBody}\ (\cons{Br}\ \ident{l}\ \ident{r})\ \ident{m} = \\
-    \hspace{2cm} \kw{let}\ (\ident{l'}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
-    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r'}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
-    \hspace{2cm} \kw{in}\ (\hlchangem{\kw{pure}}\cons{Br}\ \hlchangem{\circledast}\ident{l'}\ \hlchangem{\circledast}\ident{r'},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+    \hspace{2cm} \kw{let}\ (\ident{l$'$}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
+    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r$'$}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
+    \hspace{2cm} \kw{in}\ (\hlchangem{\kw{pure}}\cons{Br}\ \hlchangem{\circledast}\ident{l$'$}\ \hlchangem{\circledast}\ident{r$'$},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
   \end{array}
 \end{displaymath}
 The changes required are minor: we must change the type, and use the
