@@ -1,5 +1,36 @@
-\section{Conclusions}
+\section{Conclusions and Further Work}
 \label{sec:conclusions}
+
+We have presented a semantics for a small total calculus with
+primitive recursion for inductive data and a compositional treatment
+of corecursion, ensuring causality via the applicative structure of a
+\emph{local} notion of time. In effect, we use time-based typing to
+grow a given total language, where all computation terminates within
+one `day', into a larger total language, where additional recursion is
+justified clearly by the advancing clock. Functions from clocked
+inputs to clocked outputs enforce precise producer-consumer
+contracts---today's output must be computed only from today's
+input---documenting their utility as components of productive
+processes. Quantifying clock variables localises the time stream to a
+particular construction whose clients can then use it `in the moment'.
+The method, made local, can be iterated, with inner clocks justifying
+the totality of computations within one `day' of an outer clock.
+
+At present, however, we have used local time only to justify
+productive corecursion, with only primitive recursion for inductive
+types. It seems pressing to ask whether local time might similarly
+liberalise termination checking, with a local clock measuring time into
+the past and ensuring that recursive calls receive old enough inputs
+that their outputs are ready when we need them. We are actively
+seeking a semantics for such a system, but it currently seems more
+difficult to pin down.
+
+In due course, we should like to grow this experimental calculus to a
+full blown dependent type theory where (co)recursive constructions are
+checked total within nested local time streams, then exported to their
+clients without clocking. At least we have now established what local
+time streams are and how to extract productive processes from them.
+
 
 %%% Local Variables:
 %%% TeX-master: "paper"
