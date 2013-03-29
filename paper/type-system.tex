@@ -504,41 +504,41 @@ need to access an arbitrary number of elements from the input stream
 for each step of the stream processor, so their clocks cannot run in
 lockstep.
 
-\paragraph{Producer-Consumer Contracts} We are grateful to Danielsson
-for the following example of troubled productivity. In Haskell, we
-might accidentally write
-\begin{verbatim}
-nats :: [Integer]
-nats = 0 : maap (1+) nats
-
-maap :: (a -> b) -> [a] -> [b]
-maap f (a : a' : as) = f a : f a' : maap f as
-\end{verbatim}
-This \texttt{maap} is perfectly productive and coincides with
-\texttt{map} on all well defined infinite lists, yet it is too strict 
-to be used productively in \texttt{nats}. We can see that
-\texttt{maap} fails the stricter requirement that only one element
-need be consumed for each element produced. In our setting, the
-definition
-\begin{displaymath}
-  \begin{array}{l}
-    \defn{nats} : \tyname{Stream}~\tyname{Natural} \\
-    \defn{nats} = \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}.
-      \cons{Cons}(\cons{Zero},\kw{pure}~(\defn{map}~[\kappa]~\cons{Suc})
-      \circledast \ident{rec}))
-  \end{array}
-\end{displaymath}
-requires
-\begin{displaymath}
-    \defn{map} : \forall \kappa.(A\to B)\to\tyname{Stream}^\kappa~A\to\tyname{Stream}^\kappa~B
-\end{displaymath}
-which enforces the producer-consumer contract precisely: we cannot
-wait for tomorrow's input to deliver today's output. The weaker
-\begin{displaymath}
-   (A\to B)\to\tyname{Stream}~A\to\tyname{Stream}~B
-\end{displaymath}
-makes no such promise and is thus insufficient to document the
-safe use of $\defn{map}$ as a \emph{component} of productive processes.
+%\paragraph{Producer-Consumer Contracts} We are grateful to Danielsson
+%for the following example of troubled productivity. In Haskell, we
+%might accidentally write
+%\begin{verbatim}
+%nats :: [Integer]
+%nats = 0 : maap (1+) nats
+%
+%maap :: (a -> b) -> [a] -> [b]
+%maap f (a : a' : as) = f a : f a' : maap f as
+%\end{verbatim}
+%This \texttt{maap} is perfectly productive and coincides with
+%\texttt{map} on all well defined infinite lists, yet it is too strict 
+%to be used productively in \texttt{nats}. We can see that
+%\texttt{maap} fails the stricter requirement that only one element
+%need be consumed for each element produced. In our setting, the
+%definition
+%\begin{displaymath}
+%  \begin{array}{l}
+%    \defn{nats} : \tyname{Stream}~\tyname{Natural} \\
+%    \defn{nats} = \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}.
+%      \cons{Cons}(\cons{Zero},\kw{pure}~(\defn{map}~[\kappa]~\cons{Suc})
+%      \circledast \ident{rec}))
+%  \end{array}
+%\end{displaymath}
+%requires
+%\begin{displaymath}
+%    \defn{map} : \forall \kappa.(A\to B)\to\tyname{Stream}^\kappa~A\to\tyname{Stream}^\kappa~B
+%\end{displaymath}
+%which enforces the producer-consumer contract precisely: we cannot
+%wait for tomorrow's input to deliver today's output. The weaker
+%\begin{displaymath}
+%   (A\to B)\to\tyname{Stream}~A\to\tyname{Stream}~B
+%\end{displaymath}
+%makes no such promise and is thus insufficient to document the
+%safe use of $\defn{map}$ as a \emph{component} of productive processes.
 
 
 \paragraph{The Partiality Monad} The partiality monad is a well-known
