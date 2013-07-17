@@ -1,0 +1,2313 @@
+\documentclass[natbib]{sigplanconf}
+
+\usepackage[usenames]{color}
+\definecolor{citationcolour}{rgb}{0,0.4,0.2}
+\definecolor{linkcolour}{rgb}{0,0,0.8}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,
+            urlcolor=linkcolour,
+            linkcolor=linkcolour,
+            citecolor=citationcolour,
+            pdftitle=Productive Coprogramming with Guarded Recursion,
+            pdfauthor={Robert Atkey, Conor McBride},
+            pdfkeywords={}}  
+\def\sectionautorefname{Section}
+\def\subsectionautorefname{Section}
+
+\title{Productive Coprogramming with Guarded Recursion}
+
+\authorinfo{Robert Atkey}
+           { }
+           {bob.atkey@gmail.com}
+
+\authorinfo{Conor McBride}
+           {University of Strathclyde}
+           {Conor.McBride@strath.ac.uk}
+
+\usepackage{mathpartir}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{stmaryrd}
+
+% Colouring in...
+\definecolor{highlight}{rgb}{0.8,0.1,0.1}
+\definecolor{cons}{rgb}{0.8,0.1,0.2}
+\definecolor{elim}{rgb}{0.1,0.5,0.35}
+\definecolor{defnd}{rgb}{0.1,0.2,0.8}
+\definecolor{greybg}{rgb}{0.8,0.8,0.8}
+\newcommand{\highlight}[1]{\textcolor{highlight}{#1}}
+\newcommand{\cons}[1]{\textcolor{cons}{\textsf{#1}}}
+\newcommand{\elim}[1]{\textcolor{elim}{\textsf{#1}}}
+\newcommand{\defnd}[1]{\mathit{#1}}
+\newcommand{\kw}[1]{\textbf{#1}}
+\newcommand{\tyname}[1]{\textrm{#1}}
+\newcommand{\ident}[1]{\textit{#1}}
+\newcommand{\defn}[1]{\textcolor{defnd}{\ident{#1}}}
+
+% other stuff
+\newcommand{\sepbar}{\mathrel|}
+\newcommand{\Set}{\mathsf{Set}}
+\newcommand{\sem}[1]{\llbracket #1 \rrbracket}
+\newcommand{\op}{\mathsf{op}}
+\newcommand{\sortType}{\texttt{\textup{type}}}
+
+\newcommand{\delay}[1]{\mathord{\rhd\kern-0.4em^{#1}}}
+\newcommand{\delayX}[1]{\mathord{\rhd\kern-0.1em^{#1}}}
+
+\newcommand{\clkSem}[1]{\llbracket #1 \rrbracket}
+\newcommand{\ClkPER}{\mathrm{ClkPER}}
+\newcommand{\PER}{\mathrm{PER}}
+\newcommand{\semCons}[1]{\mathsf{#1}}
+\newcommand{\tySem}[1]{\llbracket #1 \rrbracket}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{definition}{Definition}
+
+\newcommand{\lemref}[1]{\hyperref[#1]{Lemma \ref*{#1}}}
+\newcommand{\thmref}[1]{\hyperref[#1]{Theorem \ref*{#1}}}
+
+\newcommand{\etal}{\textit{et} \textit{al}.}
+
+\begin{document}
+
+\exclusivelicense
+\conferenceinfo{ICFP~'13}{September 25--27, 2013, Boston, MA, USA}
+\copyrightyear{2013}
+\copyrightdata{978-1-4503-2326-0/13/09}
+\doi{2500365.2500597}
+
+\maketitle
+
+\begin{abstract}
+  Total functional programming offers the beguiling vision that, just
+  by virtue of the compiler accepting a program, we are guaranteed
+  that it will always terminate. In the case of programs that are not
+  intended to terminate, e.g., servers, we are guaranteed that
+  programs will always be \emph{productive}. Productivity means that,
+  even if a program generates an infinite amount of data, each piece
+  will be generated in finite time. The theoretical underpinning for
+  productive programming with infinite output is provided by the
+  category theoretic notion of final coalgebras. Hence, we speak of
+  \emph{co}programming with non-well-founded \emph{co}data, as a dual
+  to programming with well-founded data like finite lists and trees.
+
+  Systems that offer facilities for productive coprogramming, such as
+  the proof assistants Coq and Agda, currently do so through syntactic
+  guardedness checkers, which ensure that all self-recursive calls are
+  guarded by a use of a constructor. Such a check ensures
+  productivity. Unfortunately, these syntactic checks are not
+  compositional, and severely complicate coprogramming.
+
+  Guarded recursion, originally due to Nakano, is tantalising as a
+  basis for a flexible and compositional type-based approach to
+  coprogramming. However, as we show, guarded recursion by itself is
+  not suitable for coprogramming due to the fact that there is no way
+  to make finite observations on pieces of infinite data. In this
+  paper, we introduce the concept of \emph{clock variables} that index
+  Nakano's guarded recursion. Clock variables allow us to ``close
+  over'' the generation of infinite codata, and to make finite
+  observations, something that is not possible with guarded recursion
+  alone.
+\end{abstract}
+
+\category{D.1.1}{Programming techniques}{Applicative (functional)
+  programming} \category{D.2.4}{Software Engineering}{Software/Program
+  Verification} \category{D.3.3}{Programming Languages}{Language
+  Constructs and Features---Data types and structures}
+
+\terms
+  Languages, Theory, Types, Recursion
+
+\keywords
+  coalgebras, corecursion, guarded recursion, total functional programming
+
+\section{Introduction}
+\label{sec:introduction}
+
+Coprogramming refers to the practice of explicitly manipulating
+codata, the non-well-founded dual of well-founded data like finite
+lists and trees. Codata are useful for representing the output of an
+infinite process as a never ending stream, or for representing
+potentially infinite search trees of possibilities. The natural way to
+express codata is as a recursively defined coprogram. However, for
+recursively defined coprograms to be safely used in a total setting,
+the system must ensure that all recursive definitions are
+productive. The state of the art for productivity checking is
+currently either awkward syntactic guardedness checkers, or more
+flexible sized type systems that explicitly label everything with size
+information.
+
+In this paper, we investigate the use of \emph{guarded recursion} (due
+to Hiroshi Nakano \cite{nakano00modality}) as a lightweight typing
+discipline for enabling productive coprogramming. As we show in this
+introduction, guarded recursion by itself is not suitable for
+coprogramming, due to the strict segmentation of time inherent in
+putting guardedness information in types. We therefore introduce the
+concept of \emph{clock variables} to take us from the
+finite-time-sliced world of guarded recursion to the infinite world of
+codata.
+
+The contributions we make in this paper are the following:
+\begin{enumerate}
+\item We define a core type system for comfortable productive
+  coprogramming, combining three key features: initial algebras,
+  Nakano's guarded recursion and our main conceptual contribution:
+  quantification over clock variables. We show that by combining the
+  three key features of our system, we obtain a system for programming
+  with \emph{final coalgebras}, the category theoretic description of
+  codata. The combination of guarded recursion and clock
+  quantification allows us to dispense with the clunky syntactic
+  guardedness checks, and move to a flexible, compositional and
+  local type-based system for ensuring guardedness.
+\item We define a domain-theoretic denotational model that effectively
+  interprets our system in the untyped lazy $\lambda$-calculus. We use
+  a multiply-step-indexed model of types to prove that all well-typed
+  programs are either terminating or productive and to show the
+  correctness of our reconstruction of final coalgebras.
+\item A side benefit of the combination of guarded recursion and clock
+  quantification is that, due to the careful tracking of what data is
+  available when through guarded types, we are able to accurately
+  type, and show safe, strange circular functional programs like
+  Bird's replaceMin example.
+\end{enumerate}
+
+Despite the large amount of recent work on guarded recursion (we
+provide references throughout this introduction), this is the first
+paper that formally links guarded recursion to productive
+coprogramming. As recently noted by Birkedal and
+M{\o}gelberg~\cite{birkedal13intensional}, ``guarded recursive types
+can be used to [sic] as a crutch for higher-order programming with
+coinductive types''. In this paper, we show that this is indeed
+possible.
+
+\subsection{Guardedness checkers and guarded recursion}
+
+Several systems with support for corecursion, such as Coq (as
+described by Gim{\'e}nez \cite{gimenez94codifying}) and Agda (as
+described by Danielsson and Altenkirch \cite{danielsson09mixing}),
+make use of syntactic guardedness checks to ensure productivity of
+programs defined using corecursion. Without these checks, the
+soundness of these systems cannot be guaranteed. An unfortunate aspect
+of these guardedness checks is their non-compositionality. We
+demonstrate the problem with an example, and see how Nakano's guarded
+recursion can be used to provide a compositional type-based
+guardedness check.
+
+We will use Haskell notation for each of our informal examples, since
+it serves to illustrate the issues concisely. Consider the following
+Haskell declaration of a type of infinite streams of integers:
+\begin{displaymath}
+  \kw{data}\ \tyname{Stream} = \cons{StreamCons}\ \tyname{Integer}\ \tyname{Stream}
+\end{displaymath}
+% FIXME: something about (co)data coincidence
+
+An example of a $\tyname{Stream}$ is the infinite stream of $1$s:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{ones} :: \tyname{Stream} \\
+    \defn{ones} = \cons{StreamCons}\ 1\ \ident{ones}
+  \end{array}
+\end{displaymath}
+It is easy to see that this recursive definition is \emph{guarded};
+$\ident{ones}$ is only invoked recursively within an application of
+the stream constructor $\cons{StreamCons}$. This definition of
+$\ident{ones}$ defines an infinite data structure, but each piece of
+the data structure is delivered to us in finite time. Hence,
+$\ident{ones}$ is productive.
+
+An example of a non-guarded definition is the filter function,
+extended from finite lists to infinite streams:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{filter} :: (\tyname{Integer} \to \tyname{Bool}) \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{filter}\ \ident{f}\ (\cons{StreamCons}\ \ident{z}\ \ident{s}) = \\
+    \hspace{0.5cm}\kw{if }\ident{f}\ \ident{z}\kw{ then }\cons{StreamCons}\ \ident{z}\ (\ident{filter}\ \ident{f}\ \ident{s})\kw{ else }\ident{filter}\ \ident{f}\ \ident{s}
+  \end{array}
+\end{displaymath}
+This definition is not guarded: in the $\kw{then}$-case of the
+conditional, the recursive call to $\ident{filter}$ is not within an
+application of the stream constructor $\cons{StreamCons}$. A syntactic
+guardedness checker is right to reject this definition: consider the
+case when all of the elements of the stream are filtered out;
+$\ident{filter}$ will never return anything, and so will be
+non-productive.
+
+Syntactic guardedness checkers are not always so helpful. The
+following higher-order function defines a general merge function on
+pairs of streams:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{mergef} :: (\tyname{Integer} \to \tyname{Integer} \to \tyname{Stream} \to \tyname{Stream}) \to \\
+    \textcolor{white}{\textrm{mergef} :: }\tyname{Stream} \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{mergef}\ \ident{f}\ (\cons{StreamCons}\ \ident{x}\ \ident{xs})\ (\cons{StreamCons}\ \ident{y}\ \ident{ys}) = \\
+    \quad\quad \ident{f}\ \ident{x}\ \ident{y}\ (\ident{mergef}\ \ident{f}\ \ident{xs}\ \ident{ys})
+  \end{array}
+\end{displaymath}
+Any syntactic checker looking for constructors to guard recursive
+calls will reject this function: there are no constructors anywhere in
+the definition! This rejection is with good reason: there are
+functions that we could pass to $\ident{mergef}$ that would render it
+unproductive. For example, this function will cause $\ident{mergef}$
+to hang on all pairs of streams:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{badf} :: \tyname{Integer} \to \tyname{Integer} \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{badf}\ \ident{x}\ \ident{y}\ \ident{s} = \ident{s}
+  \end{array}
+\end{displaymath}
+On the other hand, there are plenty of good functions $\ident{f}$ that
+we could use with $\ident{mergef}$ to obtain productive functions, but
+a syntactic guardedness checker does not allow us to express this
+fact.
+
+A possible way out of this problem is to retain the syntactic
+guardedness check, and work around it by changing the type of
+$\ident{f}$. For instance, we could change the required type of
+$\ident{f}$ to:
+\begin{displaymath}
+  \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to \tyname{Integer}
+\end{displaymath}
+to allow for merging functions that operate element-wise. Or we could
+change the type to
+\begin{displaymath}
+  \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to (\tyname{Integer}, [\tyname{Integer}])
+\end{displaymath}
+which would allow for the functional argument to replace each pair of
+elements from the input streams with a non-empty list of values. The
+general trick is to make $\ident{f}$ return ``instructions'' on how to
+transform the stream back to $\ident{mergef}$, which then executes
+them in a way that the syntactic guardedness checker can see is
+guarded. This technique has been elaborated in detail by Danielsson
+\cite{danielsson10beating}. However, it is difficult to see whether we
+could capture all the possibilities for good $\ident{f}$s in a single
+type. We could give yet another type which would accommodate the
+behaviour of the following possible value of $\ident{f}$:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{f}\ \ident{x}\ \ident{y}\ \ident{s} = \cons{StreamCons}\ \ident{x}\ (\ident{map}\ (+\ident{y})\ \ident{s})
+  \end{array}
+\end{displaymath}
+Incorporating the forms of all the possible productive definitions
+into a single type seems impractical. Moreover, we complicate the
+definition of $\ident{mergef}$, which is now forced to become
+essentially an implementation of a virtual machine for running little
+stream transformer programs returned by its functional argument,
+rather than the simple one line definition we gave above.
+
+A more promising type-based solution is provided by Nakano
+\cite{nakano00modality}. Nakano introduces a guardedness type
+constructor that represents values that may only be used in a guarded
+way. Thus Nakano transports the guardedness checks from the syntactic
+level into the type system. We write this constructor, applied to a
+type $A$, as $\rhd A$ (Nakano uses the notation $\bullet A$, but the
+$\rhd A$ notation has become more common, and conveys an intuitive
+idea of displacement in time). A useful way to think of $\rhd A$ is as a
+value of $A$ that is only available ``tomorrow'', and the temporal gap
+between today and tomorrow can only be bridged by the application of a
+constructor such as $\cons{StreamCons}$. The reading of $\rhd A$ as a
+value of $A$ tomorrow is explicitly supported in the step-indexed
+semantics we present in \autoref{sec:semantics} by means of a clock
+counting down to zero.
+
+We now alter the type of $\ident{f}$ to be:
+\begin{displaymath}
+  \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}
+\end{displaymath}
+This type captures the intuition that the stream argument to
+$\ident{f}$ must only be used in a guarded way. To introduce
+guarded types into the system, we must make some changes to the types
+of our primitives. We alter the type of the constructor
+$\cons{StreamCons}$ as follows, and also introduce a stream
+deconstructor that we previously implicitly used via pattern matching:
+\begin{displaymath}
+  \begin{array}{l}
+    \cons{StreamCons} :: \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream} \\
+    \elim{deStreamCons} :: \tyname{Stream} \to (\tyname{Integer}, \rhd\tyname{Stream})
+  \end{array}
+\end{displaymath}
+The type of $\cons{StreamCons}$ shows that it takes a guarded stream
+``tomorrow'', and produces a non-guarded stream ``today''. This is in
+line with the temporal intuition we have of the type
+$\rhd\tyname{Stream}$. The inverse operation $\elim{deStreamCons}$
+takes a full stream and returns the integer and the \emph{guarded}
+remainder of the stream.
+
+To give the guardedness type constructor force, Nakano proposes the
+following alternative type of the fixpoint operator for defining
+recursive values:
+\begin{displaymath}
+  \kw{fix} :: (\rhd A \to A) \to A
+\end{displaymath}
+(The standard typing of the $\kw{fix}$ operator is $(A \to A) \to
+A$.) Nakano's alternative typing ensures that recursive definitions
+must be guarded by only allowing access to recursively generated
+values ``tomorrow''.
+
+To actually program with the guardedness constructor, we equip it with
+the structure of an applicative functor \cite{mcbride08applicative}:
+\begin{displaymath}
+  \begin{array}{l}
+    \kw{pure} :: A \to \rhd A \\
+    \kw{$(\circledast)$} :: \rhd (A \to B) \to \rhd A \to \rhd B
+  \end{array}
+\end{displaymath}
+Note that $\rhd$ is not a monad: a join operation of type $\rhd(\rhd
+A) \to \rhd A$ would allow us to collapse multiple guardedness
+obligations.
+
+This method for integrating Nakano's guardedness type constructor into
+a typed $\lambda$-calculus is not the only one.  Nakano uses a system
+of subtyping with respect to the guardedness type constructor that has
+a similar effect to assuming that $\rhd$ is an applicative functor. We
+propose to treat $\rhd$ as an applicative functor here, due to the greater
+ease with which it can be incorporated into a standard functional
+programming language like Haskell. Krishnaswami and Benton
+\cite{krishnaswami11semantic,krishnaswami11ultrametric} have presented
+an alternative method that annotates members of the typing context
+with the level of guardedness that applies to them. Severi and de
+Vries \cite{severi12pure} have generalised Krishnaswami and Benton's
+approach for any typed $\lambda$-calculus derived from a Pure Type
+System (PTS), including dependently typed systems. These calculi have
+nice proof theoretic properties, such as being able to state
+productivity in terms of infinitary strong normalisation.
+
+With the guardedness type constructor, and its applicative functor
+structure, we can rewrite the $\ident{mergef}$ function to allow the
+alternative typing which only allows functional arguments that will
+lead to productive definitions.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{mergef} :: (\tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}) \to \\
+    \textcolor{white}{\textrm{mergef} :: }\ \tyname{Stream} \to \tyname{Stream} \to \tyname{Stream} \\
+    \defn{mergef}\ \ident{f} = \kw{fix}\ (\lambda \ident{g}\ \ident{xs}\ \ident{ys}. \\
+    \hspace{2.5cm} \kw{let}\ (\ident{x}, \ident{xs$'$}) = \elim{deStreamCons}\ \ident{xs} \\
+    \hspace{2.5cm} \textcolor{white}{\kw{let}\ }(\ident{y}, \ident{ys$'$}) = \elim{deStreamCons}\ \ident{ys} \\
+    \hspace{2.5cm} \kw{in}\ \ident{f}\ \ident{x}\ \ident{y}\ (\ident{g} \circledast \ident{xs$'$} \circledast \ident{ys$'$}))
+  \end{array}
+\end{displaymath}
+Aside from the explicit uses of $\kw{fix}$ and $\elim{deStreamCons}$,
+which were hidden by syntactic sugar in our previous definition, the
+only substantial changes to the definition are the uses of applicative
+functor apply ($\circledast$). These uses indicate operations that are
+occurring under a guardedness type constructor.
+
+\subsection{From the infinite to the finite}
+\label{sec:infinite-to-finite}
+
+The type system for guarded recursion that we described above allowed
+us to remove the syntactic guardedness check and replace it with a
+compositional type-based one. However, aside from proposing
+applicative functor structure as a convenient way to incorporate the
+guardedness type constructor into a functional language, we have not
+gone much beyond Nakano's original system. We now describe a problem
+with guarded recursion when attempting to combine infinite and finite
+data. We propose a solution to this problem in the
+\hyperref[sec:clock-vars]{next subsection}.
+
+Consider the $\ident{take}$ function that reads a finite prefix of an
+infinite stream into a list. This function will have the following type:
+\begin{displaymath}
+  \defn{take} :: \tyname{Natural} \to \tyname{Stream} \to [\tyname{Integer}]
+\end{displaymath}
+where we wish to regard the type $[\tyname{Integer}]$ as the type of
+\emph{finite} lists of integers. The explicit segregation of
+well-founded and non-well-founded types is important for our intended
+applications of total functional programming and theorem proving.
+
+We also assume that the type $\tyname{Natural}$ of natural numbers is
+well-founded, so we may attempt to write $\ident{take}$ by structural
+recursion on its first argument. However, we run into a difficulty,
+which we have \colorbox{greybg}{highlighted}.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{take} :: \tyname{Natural} \to \tyname{Stream} \to [\tyname{Integer}] \\
+    \defn{take}\ 0\ \ident{s} = [] \\
+    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \colorbox{greybg}{$\ident{s$'$}$} \\
+    \quad \kw{where}\ (\ident{x}, \ident{s$'$}) = \elim{deStreamCons}\ \ident{s}
+  \end{array}
+\end{displaymath}
+The problem is that the variable $\ident{s$'$}$, which we have obtained
+from $\elim{deStreamCons}$, has type $\rhd\tyname{Stream}$. However,
+to invoke the $\ident{take}$ function structurally recursively, we
+need something of type $\tyname{Stream}$, without the guardedness
+restriction.
+
+We analyse this problem in terms of our intuitive reading of
+$\rhd\tyname{Stream}$ as a stream that is available
+``tomorrow''. Nakano's typing discipline slices the construction of
+infinite data like $\tyname{Stream}$ into discrete steps. In contrast,
+a well-founded data type like $[\tyname{Integer}]$ lives entirely in
+the moment. While a stream is being constructed, this slicing is
+required so that we do not get ahead of ourselves and attempt to build
+things today from things that will only be available tomorrow. But
+once a stream has been fully constructed, we ought to be able to blur
+the distinctions between the days of its construction. We accomplish
+this in our type system by means of \emph{clock variables}, and
+quantification over them.
+
+\subsection{Clock variables}
+\label{sec:clock-vars}
+
+We extend the type system with \emph{clock variables} $\kappa$. A
+clock variable $\kappa$ represents an individual time sequence that
+can be used for safe construction of infinite data like streams. In
+our model, clock variables are interpreted as counters running down to
+zero in the style of step-indexed models. By quantifying over all
+counters we are able to accommodate all possible finite observations
+on an infinite data structure.
+
+We annotate the guardedness type constructor with a clock variable to
+indicate which time stream we are considering: $\delay\kappa
+A$. Infinite data types such as streams are now annotated by their
+clock variable, indicating the time stream that they are being
+constructed on. We have the following new types for the constructor
+and deconstructor:
+\begin{displaymath}
+  \begin{array}{l}
+    \cons{StreamCons$^\kappa$} :: \tyname{Integer} \to \delay\kappa \tyname{Stream}^\kappa \to \tyname{Stream}^\kappa \\
+    \elim{deStreamCons$^\kappa$} :: \tyname{Stream}^\kappa \to (\tyname{Integer}, \delay\kappa\tyname{Stream}^\kappa)    
+  \end{array}
+\end{displaymath}
+We now regard the type $\tyname{Stream}^\kappa$ as the type of
+infinite streams in the process of construction. A finished infinite
+stream is represented by \emph{quantifying} over the relevant clock
+variable: $\forall \kappa. \tyname{Stream}^\kappa$. If we think of
+each possible downward counting counter that $\kappa$ could represent,
+then this universally quantified type allows for any counter large
+enough to allow us any finite extraction of data from the stream. We
+use the notation $\Lambda\kappa. e$ and $e[\kappa]$ to indicate clock
+abstraction and application respectively, in the style of explicitly
+typed System F type abstraction and application.
+
+The fixpoint operator is parameterised by the clock variable:
+\begin{displaymath}
+  \kw{fix} :: \forall \kappa. (\delay\kappa A \to A) \to A
+\end{displaymath}
+as is the applicative functor structure carried by $\delay\kappa$:
+\begin{displaymath}
+  \begin{array}{l}
+    \kw{pure} :: \forall \kappa. A \to \delay\kappa A \\
+    \kw{$(\circledast)$} :: \forall \kappa. \delay\kappa (A \to B) \to \delay\kappa A \to \delay\kappa B
+  \end{array}
+\end{displaymath}
+We also add an additional piece of structure to eliminate guarded
+types that have been universally quantified:
+\begin{displaymath}
+  \kw{force} :: (\forall \kappa.\ \delay\kappa A) \to (\forall \kappa.\ A)
+\end{displaymath}
+Intuitively, if we have a value that, for any time stream, is one time
+step away, we simply instantiate it with a time stream that has at
+least one step left to run and extract the value. Note that the
+universal quantification is required on the right hand side since
+$\kappa$ may appear free in the type $A$. The $\kw{force}$ operator
+has a similar flavour to the $\kw{runST} :: (\forall s. \tyname{ST}\
+s\ a) \to a$ for the $\tyname{ST}$ monad
+\cite{DBLP:journals/jfp/MoggiS01,launchbury94lazy}. In both cases,
+rank-2 quantification is used to prevent values from ``leaking'' out
+from the context in which it is safe to use them.
+
+Using $\kw{force}$ we may write a deconstructor for completed streams
+of type $\forall \kappa. \tyname{Stream}^\kappa$.
+\begin{displaymath}
+  \begin{array}{l}
+    \elim{deStreamCons} :: (\forall \kappa. \tyname{Stream}^\kappa) \to (\tyname{Integer}, \forall \kappa. \tyname{Stream}^\kappa) \\
+    \elim{deStreamCons}\ \ident{x} = \\
+    \quad\quad
+    \begin{array}[t]{l}
+      (\Lambda \kappa. \kw{fst}\ (\elim{deStreamCons}^\kappa\ (\ident{x}[\kappa])),\\
+      \quad\kw{force}\ (\Lambda \kappa. \kw{snd}\ (\elim{deStreamCons}^\kappa\ (\ident{x}[\kappa]))))
+    \end{array}
+  \end{array}
+\end{displaymath}
+In this definition we have made use of a feature of our type system
+that states that the type equality $\forall \kappa. A \equiv A$ holds
+whenever $\kappa$ is not free in $A$. Our system also includes other
+type equalities that demonstrate how clock quantification interacts
+with other type formers. These are presented in
+\autoref{sec:type-equality}.
+
+In the presence of clock variables, our definition of $\ident{take}$
+is well-typed and we get the function we desire: taking a finite
+observation of a piece of infinite data:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{take} :: \tyname{Natural} \to (\forall \kappa. \tyname{Stream}^\kappa) \to [\tyname{Integer}] \\
+    \defn{take}\ 0\ \ident{s} = [] \\
+    \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \ident{s$'$} \\
+    \quad \kw{where}\ (\ident{x}, \ident{s$'$}) = \elim{deStreamCons}\ \ident{s}
+  \end{array}
+\end{displaymath}
+
+Clock variables also allow us to make clear in the types fine
+distinctions between functions that are extensionally equal, but
+differ in their productivity. In plain Haskell, the following two
+stream mapping functions have the same behaviour on any
+\emph{completely constructed} stream. The first $\ident{map}$
+processes each element one at a time
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{map}~f~s = \cons{StreamCons}~(f~x)~(\ident{map}~f~s') \\
+    \quad \kw{where}~(\ident{x}, \ident{s$'$}) = \elim{deStreamCons}~s
+  \end{array}
+\end{displaymath}
+while $\ident{maap}$ processes elements two at a time by pattern matching:
+%\begin{displaymath}
+%  \begin{array}{@{}l}
+%    \defn{maap}~f~s = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~(\ident{maap}~f~s'')) \\
+%    \quad \kw{where}~(\ident{x}, \ident{s$'$}) = \elim{deStreamCons}~s;~(\ident{y}, \ident{s$''$}) = \elim{deStreamCons}~s'
+%  \end{array}
+%\end{displaymath}
+\begin{displaymath}
+  \begin{array}{@{}l}
+    \defn{maap}~f~(\cons{StreamCons}~x~(\cons{StreamCons}~y~s'')) \\
+    \quad = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~(\ident{maap}~f~s''))
+  \end{array}
+\end{displaymath}
+If all the elements of the input are available at once, then
+$\ident{map}$ and $\ident{maap}$ have the same behaviour. However, if
+these functions are passed streams that are still being constructed,
+then their behaviour can differ significantly. Consider these two
+definitions of a stream of natural numbers, using $\ident{map}$ and $\ident{maap}$:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{nats} = \cons{StreamCons}~0~(\ident{map}~(\lambda x.~x+1)~\ident{nats})\\
+    \defn{badnats} = \cons{StreamCons}~0~(\ident{maap}~(\lambda x.~x+1)~\ident{badnats})
+  \end{array}
+\end{displaymath}
+Running $\ident{nats}$ produces the infinite stream of natural
+numbers, as expected, but running $\ident{badnats}$ produces
+nothing. The function $\ident{maap}$ expects two elements to be
+available on its input stream, while $\ident{badnats}$ has only
+provided one.
+
+Even though $\ident{map}$ and $\ident{maap}$ are extensionally equal,
+they have different behaviour on partially constructed streams. We can
+state this different behaviour using the following types in our system:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{map} :: \forall \kappa. (\tyname{Integer} \to \tyname{Integer}) \to \tyname{Stream}^\kappa \to \tyname{Stream}^\kappa \\
+    \defn{maap} :: (\tyname{Integer} \to \tyname{Integer}) \to (\forall \kappa. \tyname{Stream}^\kappa) \to (\forall \kappa. \tyname{Stream}^\kappa)
+  \end{array}
+\end{displaymath}
+Thus, $\ident{map}$'s type states that the input stream and output
+stream run on the same clock $\kappa$, so each element of the output
+will only require one element of the input. This is exactly what
+$\ident{nats}$ requires, and our type system will accept the
+definition of $\ident{nats}$. In contrast, $\ident{maap}$'s type
+states that it requires a fully constructed stream as input. The
+definition of $\ident{badnats}$ does not provide this, and so our type
+system will reject it.
+
+By using clock quantification to ``close over'' the guardedness, our
+approach thus \emph{localises} the discipline which makes the
+productivity of definitions plain, without affecting the types at
+which the defined objects are used. Abel's \emph{sized types} impose a
+similar discipline, but globally~\cite{abel04termination}.
+
+\subsection{Final coalgebras from initial algebras, guards and clocks}
+\label{sec:main-results-intro}
+
+In the previous subsection, we informally stated that the type
+$\tyname{Stream} = \forall \kappa. \tyname{Stream}^\kappa$ represents
+exactly the type of infinite streams of integers. We make this
+informal claim precise by using the category theoretic notion of final
+coalgebra. A key feature of our approach is that we decompose the
+notion of final coalgebra into three parts: initial algebras,
+Nakano-style guarded types, and clock quantification.
+
+\paragraph{Initial algebras}
+In \autoref{sec:type-system} we present a type system that includes a
+notion of strictly positive type operator. We include a least fixpoint
+operator $\mu X. F[X]$. For normal strictly positive type operators
+$F$ (i.e. ones that do not involve the $\delay\kappa$ operator), $\mu
+X. F[X]$ is exactly the normal least fixpoint of $F$. Thus we can
+define the normal well-founded types of natural numbers, lists, trees
+and so on. Our calculus contains constructors $\cons{Cons$_F$} ::
+F[\mu X. F] \to \mu X. F$ for building values of these types, and
+recursion combinators for eliminating values:
+\begin{displaymath}
+  \elim{primRec$_{F,A}$} :: (F[(\mu X. F) \times A] \to A) \to \mu X. F[X] \to A 
+\end{displaymath}
+We opt to use primitive recursion instead of a fold operator
+(i.e. $\ident{fold} :: (F[A] \to A) \to \mu X. F[X] \to A$) because
+it allows for constant time access to the top-level of an inductive
+data structure.
+
+We show in the proof of \thmref{thm:initial-f-algebra} that $\mu X. F$
+is the carrier of the initial $F$-algebra in our model. Therefore, we
+may use standard reasoning techniques about initial algebras to reason
+about programs written using the $\elim{primRec}$ combinator.
+
+\paragraph{Guarded final coalgebras}
+When we consider strictly positive type operators of the form
+$F[\delay\kappa X]$, where $\kappa$ does not appear in $F$ then, in
+addition to $\mu X. F[\delay\kappa X]$ being the least fixpoint of the
+operator $F[\delay\kappa -]$, it is also the \emph{greatest}
+fixpoint. This initial-final coincidence is familiar from domain
+theoretic models of recursive types (see, e.g., Smyth and Plotkin
+\cite{smyth82category}), and has previously been observed as a
+feature of guarded recursive types by Birkedal
+\etal~\cite{birkedal12first}.
+
+The $\ident{unfold}$ combinator that witnesses $\mu X. F[\delay\kappa
+X]$ as final can be implemented in terms of the $\kw{fix}$ operator,
+and $\cons{Cons}$:
+\begin{displaymath}
+  \begin{array}[t]{l}
+    \defn{unfold$_F$} :: \forall \kappa. (A \to F[\delay\kappa A]) \to A \to \mu X. F[\delay\kappa X] \\
+    \defn{unfold$_F$} = \Lambda \kappa.\lambda \ident{f}. \kw{fix}\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}\ (\ident{fmap}_F\ (\lambda \ident{x}. \ident{g} \circledast \ident{x})\ (\ident{f}\ \ident{a})))
+  \end{array}
+\end{displaymath}
+where $\ident{fmap}_F :: (A \to B) \to (F[A] \to F[B])$ is the
+functorial mapping combinator associated with the strictly positive
+type operator $F$. Note that without the additional $\delay\kappa$ in
+$F[\delay\kappa -]$, there would be no way to define $\ident{unfold}$,
+due to the typing of $\kw{fix}$.
+
+To make observations on elements, we define a $\ident{deCons$_F$}$
+combinator for every $F$, using the primitive recursion
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{deCons$_F$} :: \forall \kappa. (\mu X. F[\delay\kappa X]) \to F[\delay\kappa \mu X. F[\delay\kappa X]] \\
+    \defn{deCons$_F$} = \Lambda \kappa. \elim{primRec}\ (\lambda \ident{x}.\ \ident{fmap}_{F[\delayX\kappa-]}\ (\lambda \ident{y}.\kw{fst}\ \ident{y})\ \ident{x})
+  \end{array}
+\end{displaymath}
+The proof of \thmref{thm:final-f-de-coalgebra} shows that these
+definitions of $\ident{unfold$_F$}$ and $\ident{deCons$_F$}$ exhibit
+$\mu X. F[\delay\kappa X]$ as the final $F[\delay\kappa-]$-coalgebra,
+using $\ident{deCons$_F$}$ as the structure map. This means that
+$\ident{unfold$_F$}[\kappa] f$ is the unique $F[\delay\kappa-]$-coalgebra
+homomorphism from $A$ to $\mu X. F[\delay\kappa-]$.
+
+\paragraph{Final coalgebras}
+\thmref{thm:final-f-de-coalgebra} only gives us final coalgebras in
+the case when the recursion in the type is guarded by the type
+constructor $\delay\kappa-$. So we do not yet have a dual to the least
+fixpoint type constructor $\mu X. F$. However, as we hinted above in
+the case of streams, we can use clock quantification to construct a
+final $F$-coalgebra, where $F$ need not contain an occurrence of
+$\delay\kappa-$.
+
+For the type $\forall \kappa. \mu X. F[\delay\kappa-]$ we define an
+$\ident{unfold$^\nu_F$}$ operator, in a similar style to the
+$\ident{unfold$_F$}$ operator above. However, this operator takes an
+argument of type $(A \to F[A])$, with no mention of guardedness.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{unfold$^\nu_F$} :: (A \to F[A]) \to A \to \forall \kappa. \mu X. F[\delay\kappa X] \\
+    \defn{unfold$^\nu_F$} = \lambda \ident{f}\ \ident{a}. \Lambda \kappa. \\
+    \quad\quad\kw{fix}\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}_F\ (\ident{fmap}_F (\lambda \ident{x}. \ident{g} \circledast \kw{pure}\ \ident{x})\ (\ident{f}\ \ident{a})))\ \ident{a}
+  \end{array}
+\end{displaymath}
+We can also define the corresponding deconstructor, building on the
+definition of $\ident{deCons$_F$}$ above, but also using the $\kw{force}$
+construct in conjunction with clock quantification. This is a
+generalisation of the definition of $\elim{deStreamCons}$ above.
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{deCons$^\nu_F$} :: (\forall \kappa. \mu X. F[\delay\kappa X]) \to F[\forall \kappa. \mu X. F[\delay\kappa X]] \\
+    \defn{deCons$^\nu_F$} = \lambda x.~\ident{fmap$_F$}\ (\lambda x. \kw{force}\ x)\ (\Lambda \kappa.~\ident{deCons$_F$}[\kappa]\ (x[\kappa]))
+  \end{array}
+\end{displaymath}
+In the application of $\ident{fmap$_F$}$, we make use of the type
+equalities in our calculus, which allow us to treat the types $\forall
+\kappa. F[X]$ and $F[\forall \kappa. X]$ as equivalent, when $\kappa$
+does not appear in $F$. We present the type equalities in
+\autoref{sec:type-equality}, and prove them sound in
+\autoref{sec:type-interp}.
+
+Our last main technical result, \thmref{thm:final-f-coalgebra}, states
+that, in the semantics we define \autoref{sec:semantics}, $\forall
+\kappa. \mu X. F[\delay\kappa-]$ actually is the final
+$F$-coalgebra. The use of clock quantification has allowed us to
+remove mention of the guardedness type constructor, and given us a way
+to safely program and reason about $F$-coalgebras.
+
+\subsection{Circular traversals of trees}
+\label{sec:repmin}
+
+We now present a perhaps unexpected application of the use of clock
+quantification that does not relate to ensuring productivity of
+recursive programs generating infinite data. An interesting use of
+laziness in functional programming languages is to perform single-pass
+transformations of data structures that would appear to require at
+least two passes. A classic example, due to Bird
+\cite{bird84circular}, is the $\ident{replaceMin}$ function that
+replaces each value in a binary tree with the minimum of all the
+values in the tree, in a single pass. In normal Haskell, this function
+is written as follows:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{replaceMin} :: \tyname{Tree} \to \tyname{Tree} \\
+    \defn{replaceMin}\ \ident{t} = \kw{let}\ (\ident{t$'$}, \ident{m}) = \ident{replaceMinBody}\ \ident{t}\ \ident{m}\ \kw{in}\ \ident{t$'$} \\
+    \hspace{0.6cm} \kw{where} \\
+    \hspace{1cm} \defn{replaceMinBody}\ (\cons{Leaf}\ \ident{x})\ \ident{m} = (\cons{Leaf}\ \ident{m}, \ident{x}) \\
+    \hspace{1cm} \defn{replaceMinBody}\ (\cons{Br}\ \ident{l}\ \ident{r})\ \ident{m} = \\
+    \hspace{2cm} \kw{let}\ (\ident{l$'$}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
+    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r$'$}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
+    \hspace{2cm} \kw{in}\ (\cons{Br}\ \ident{l$'$}\ \ident{r$'$},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+  \end{array}
+\end{displaymath}
+The interesting part of this function is the first $\kw{let}$
+expression. This takes the minimum value $\ident{m}$ computed by the
+traversal of the tree and passes it into the \emph{same} traversal to
+build the new tree. This function is a marvel of declarative
+programming: we have declared that we wish the tree $t'$ to be
+labelled with the minimum value in the tree $t$ just by stating that
+they be the same, without explaining at all why this definition makes
+any sense. Intuitively, the reason that this works is that the overall
+minimum value is never used in the computation of the minimum, only
+the construction of the new tree. The computation of the minimum and
+the construction of the new tree conceptually exist at different
+moments in time, and it is only safe to treat them the same after both
+have finished.
+
+Using explicit clock variables we can give a version of the
+$\ident{replaceMin}$ definition that demonstrates that we have
+actually defined a total function from trees to trees. The use of
+clock variables allows us to be explicit about the time when various
+operations are taking place.
+
+Out first step is to replace the circular use of $\kw{let}$ with a
+\emph{feedback} combinator defined in terms of the $\kw{fix}$
+operator:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{feedback} : \forall \kappa.~(\delay\kappa U \to (B[\kappa], U)) \to B[\kappa] \\
+    \defn{feedback} = \Lambda \kappa. \lambda f. \kw{fst}~(\kw{fix}~(\lambda x.~f~(\kw{pure}~(\lambda x. \kw{snd}~x) \circledast x)))
+  \end{array}
+\end{displaymath}
+In the application of the $\kw{fix}$ operator, $x : \delay\kappa (B
+\times U)$.  The notation $B[\kappa]$ indicates that $\kappa$ may
+appear free in the type $B$.
+
+% We have named this definition $\ident{trace}$ due to similarity of its
+% type to the trace operator of traced symmetric monoidal categories
+% \cite{something}. Trace operators provide an axiomatisaion of the
+% notion of feedback operator that has many applications in denotational
+% semantics. The key difference with our definition is that the first
+% occurence of the ``feedback type'' $U$ is guarded by the guardedness
+% type constructor. This will prevent us from writing definitions that
+% get ahead of themselves and access data that is not yet ready.
+
+\newcommand{\hlchangem}[1]{\colorbox{greybg}{$#1$}}
+\newcommand{\hlchange}[1]{\colorbox{greybg}{#1}}
+
+We now rewrite the $\ident{replaceMinBody}$ function so that we can
+apply $\ident{feedback}$ to it. We have \hlchange{highlighted} the
+changes from the previous definition.
+\begin{displaymath}
+  \begin{array}{@{}l}
+    \defn{replaceMinBody} :: \tyname{Tree} \to \hlchangem{\forall \kappa.}\hlchangem{\delay\kappa}\tyname{Integer} \to (\hlchangem{\delay\kappa}\tyname{Tree},\tyname{Integer}) \\
+    \hspace{0cm} \defn{replaceMinBody}\ (\cons{Leaf}\ \ident{x})\ \ident{m} = (\hlchangem{\kw{pure}}\cons{Leaf}\ \hlchangem{\circledast}\ident{m}, \ident{x}) \\
+    \hspace{0cm} \defn{replaceMinBody}\ (\cons{Br}\ \ident{l}\ \ident{r})\ \ident{m} = \\
+    \hspace{2cm} \kw{let}\ (\ident{l$'$}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
+    \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r$'$}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
+    \hspace{2cm} \kw{in}\ (\hlchangem{\kw{pure}}\cons{Br}\ \hlchangem{\circledast}\ident{l$'$}\ \hlchangem{\circledast}\ident{r$'$},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+  \end{array}
+\end{displaymath}
+The changes required are minor: we must change the type, and use the
+applicative functor structure of $\delay\kappa$ to indicate when
+computations are taking place ``tomorrow''.
+
+Applying $\ident{feedback}$ to $\ident{replaceMinBody}$, and using
+$\kw{force}$ to remove the now redundant occurrence of $\delay\kappa$,
+we can define the full $\ident{replaceMin}$ function in our system:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{replaceMin} :: \tyname{Tree} \to \tyname{Tree} \\
+    \defn{replaceMin}\ \ident{t} = \kw{force}\ (\Lambda \kappa. \ident{feedback}[\kappa]\ (\ident{replaceMinBody}[\kappa])\ \ident{t})
+  \end{array}
+\end{displaymath}
+By the soundness property of our system that we prove in
+\autoref{sec:semantics}, we are assured that we have defined a total
+function from trees to trees. The standard Haskell type system does
+not provide this guarantee.
+
+\subsection{Models of guarded recursion}
+
+To substantiate the claims we have made in this introduction, in
+\autoref{sec:semantics} we construct a multiply-step-indexed model of
+the type system we present in the next section. The multiple
+step-indexes are required for the multiple clock variables in our
+system, each representing separate time streams. Step-indexed models
+were introduced by Appel and McAllester~\cite{appel01indexed} to prove
+properties of recursive types. The use of step-indexing serves to
+break the circularity inherent in recursive types. Dreyer
+\etal~\cite{dreyer11logical} exposed the connection between Nakano's
+guarded recursion and step indexed models. More recently, Birkedal
+\etal~\cite{birkedal12first,birkedal13intensional} have elaborated
+this connection, particularly in the direction of dependent types.
+
+Alternative semantics for guarded recursion have involved ultrametric
+spaces, for example Birkedal \etal~\cite{birkedal10metric} and
+Krishnaswami and Benton \cite{krishnaswami11ultrametric}. Hutton and
+Jaskelioff \cite{hutton11representing} have also used an approach
+based on metric spaces for identifying productive stream generating
+functions.
+
+Finally, we mention the syntactic approach of Severi and de Vries
+\cite{severi12pure}, who define the notion of infinitary strong
+normalisation to prove productivity of dependent type systems with
+guarded recursion.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{A type system with clocks and guards}
+\label{sec:type-system}
+
+In the introduction, we presented our motivating examples in terms of
+a Haskell-like language informally extended with a Nakano-style guard
+modality and clock quantification. To formally state the properties of
+our combination of clock quantification, clock-indexed guard
+modalities and inductive types, in this section we define an extension
+of the simply-typed $\lambda$-calculus with these features. In the
+next section, we define a semantics for our system in which we can
+formally state the results that we claimed in the introduction.
+
+\subsection{Well-formed types with clock variables}
+\label{sec:types}
+
+\begin{figure}[t]
+  \centering
+  \begin{mathpar}
+    \inferrule*
+    {X \in \Theta}
+    {\Delta; \Theta \vdash X : \sortType}
+    
+    \inferrule*
+    { }
+    {\Delta; \Theta \vdash 1 : \sortType}
+    
+    \inferrule*
+    {\Delta; \Theta \vdash A : \sortType \\ \Delta; \Theta \vdash B : \sortType}
+    {\Delta; \Theta \vdash A \times B : \sortType}
+    
+    \inferrule*
+    {\Delta; \Theta \vdash A : \sortType \\ \Delta; \Theta \vdash B : \sortType}
+    {\Delta; \Theta \vdash A + B : \sortType}
+    
+    \inferrule*
+    {\Delta; - \vdash A : \sortType \\ \Delta; \Theta \vdash B : \sortType}
+    {\Delta; \Theta \vdash A \to B : \sortType}
+    
+    \inferrule*
+    {\Delta; \Theta, X \vdash A : \sortType}
+    {\Delta; \Theta \vdash \mu X. A : \sortType}
+
+    \inferrule*
+    {\Delta, \kappa; \Theta \vdash A : \sortType}
+    {\Delta; \Theta \vdash \forall \kappa. A : \sortType}
+
+    \inferrule*
+    {\Delta; \Theta \vdash A : \sortType \\ \kappa \in \Delta}
+    {\Delta; \Theta \vdash \delay\kappa A : \sortType}
+  \end{mathpar}
+  \caption{Well-formed types and type operators}
+  \label{fig:types}
+\end{figure}
+
+The types of our system include two kinds of variable that may occur
+free and bound: clock variables in the clock quantifier and the
+clock-indexed guard modality, as well as type variables occurring in
+strictly positive positions for the inductive types. We therefore
+formally define when a type is well-formed with respect to contexts of
+clock and type variables, using the rules displayed in
+\autoref{fig:types}.
+
+The well-formedness judgement for types ($\Delta; \Theta \vdash A :
+\sortType$) is defined with respect to a \emph{clock context} $\Delta$
+and a \emph{type variable context} $\Theta$. Clock contexts are lists
+of clock variables, $\Delta = \kappa_1, ..., \kappa_n$, and type
+variable contexts are lists of type variable names, $\Theta = X_1,
+..., X_n$. Type variables are only used to manage the scope of the
+nested least fixpoint type operator $\mu$; there is no type
+polymorphism in the type system we present here. We generally use
+Roman letters $A$, $B$, $C$ to stand for types, but we also
+occasionally use $F$ and $G$ when we wish to emphasise that types with
+free type variables are strictly positive type operators. For any type
+$A$, we define $\mathit{fc}(A)$ to be the set of free clock variables
+that appear in $A$.
+
+Most of the type well-formedness rules are standard: we have a rule
+for forming a type from a type variable that is in scope and rules for
+forming the unit type $1$, product types $A \times B$, sum types $A +
+B$, function types $A \to B$ and least fixpoint types $\mu X. A$. We
+enforce the restriction to strictly positive type operators by
+disallowing occurrences of free type variables in the domain component
+of function types. In \autoref{sec:typed-terms}, we will see that each
+of the standard type constructors will have the usual corresponding
+term-level constructs; our system subsumes the simply typed
+$\lambda$-calculus with products, sums and least fixpoint types.
+
+The remaining two rules are for forming clock quantification $\forall
+\kappa.A$ types and the clock-indexed Nakano-style guard modality
+$\delay\kappa A$. The type formation rule for clock quantification is
+very similar to universal type quantification from standard
+polymorphic type theories like System F. 
+
+As we described in the introduction in \autoref{sec:clock-vars}, we
+have augmented the Nakano-style delay modality with a clock
+variable. This allows us to distinguish between guardedness with
+respect to multiple clocks, and hence to be able to close over all the
+steps guarded by a particular clock.
+
+\subsection{Type Equality}
+\label{sec:type-equality}
+
+The examples we presented in the introduction made use of several type
+equalities allowing us to move clock quantification through types. For
+instance, in the definition of the $\elim{deStreamCons}$ stream
+deconstructor in \autoref{sec:clock-vars}, we made use of a type
+equality to treat a value of type $\forall \kappa. \tyname{Integer}$
+as having the type $\tyname{Integer}$. Intuitively, this is valid
+because a value of type $\tyname{Integer}$ exists independently of any
+clock, therefore we can remove the clock quantification. In general,
+clock quantification commutes with almost all strictly positive type
+formers, except for guards indexed by the same clock variable. For
+those, we must use $\kw{force}$.
+
+The following rules are intended to be read as defining a judgement
+$\Delta; \Theta \vdash A \equiv B : \sortType$, indicating that the
+well-formed types $\Delta; \Theta \vdash A : \sortType$ and $\Delta;
+\Theta \vdash B : \sortType$ are to be considered equal. In addition
+to these rules, the relation $\Delta \vdash A \equiv B : \sortType$ is
+reflexive, symmetric, transitive and a congruence.
+\begin{displaymath}
+  \begin{array}{r@{\hspace{0.3em}}c@{\hspace{0.3em}}ll}
+    \forall \kappa. A & \equiv & A & (\kappa \not\in \mathit{fc}(A)) \\
+    \forall \kappa. A + B & \equiv & (\forall \kappa. A) + (\forall \kappa. B) \\
+    \forall \kappa.  A \times B & \equiv & (\forall \kappa. A) \times (\forall \kappa. B) \\
+    \forall \kappa. A \to B & \equiv & A \to \forall \kappa. B & (\kappa \not\in \mathit{fc}(A)) \\
+    \forall \kappa. \forall \kappa'. A & \equiv & \forall \kappa'. \forall \kappa. A & (\kappa \not= \kappa') \\
+    \forall \kappa. \delay\kappa' A & \equiv & \delay\kappa'\forall \kappa. A & (\kappa \not= \kappa') \\
+    \forall \kappa. \mu X. F[A,X] & \equiv & \mu X. F[\forall \kappa. A,X] & (\mathit{fc}(F) = \emptyset)
+  \end{array}
+\end{displaymath}
+In the last rule, $F$ must be strictly positive in $A$ as well as $X$.
+
+After we define the terms of our system in the next sub-section, it
+will become apparent that several of the type equality rules could be
+removed, and their use replaced by terms witnessing the conversions
+back and forth. In the case of product types, we could define the
+following pair of terms (using the syntax and typing rules we define
+below):
+\begin{displaymath}
+  \begin{array}{l}
+    \lambda x. (\Lambda \kappa. \mathbf{fst}~(x[\kappa]), \Lambda \kappa. \kw{snd}~(x[\kappa])) \\
+    \hspace{3cm} : (\forall \kappa. A \times B) \to (\forall \kappa. A) \times (\forall \kappa. B)
+  \end{array}
+\end{displaymath}
+and
+\begin{displaymath}
+  \begin{array}{l}
+    \lambda x. \Lambda \kappa. (\kw{fst}~x~[\kappa], \kw{snd}~x~[\kappa]) \\
+    \hspace{3cm} : (\forall \kappa. A) \times (\forall \kappa. B) \to \forall \kappa. A \times B
+  \end{array}
+\end{displaymath}
+Indeed, the denotational semantics we present in
+\autoref{sec:semantics} will interpret both of these functions as the
+identity. However, not all the type equality rules are expressible in
+terms of clock abstraction and application, for instance, the $\forall
+\kappa. A \equiv A$ rule and the rule for sum types. Moreover, our
+definition of $\elim{deCons}$ in \autoref{sec:main-results-intro} is
+greatly simplified by having clock quantification commute with all
+type formers uniformly (recall that we made crucial use of the
+equality $\forall \kappa. F[-] \equiv F[\forall
+\kappa. -]$). Therefore, we elect to include type equalities for
+commuting clock quantification with all type formers uniformly.
+
+\subsection{Well-typed Terms}
+\label{sec:typed-terms}
+
+\begin{figure*}[t]
+  \centering
+  \textbf{1. Simply-typed $\lambda$-calculus with products and sums}
+  \begin{mathpar}
+    \inferrule* [right=Var]
+    {\ident{x} : A \in \Gamma}
+    {\Delta; \Gamma \vdash \ident{x} : A}
+
+    \inferrule* [right=Unit]
+    { }
+    {\Delta; \Gamma \vdash * : 1}
+
+    \inferrule* [right=Abs]
+    {\Delta; \Gamma, \ident{x} : A \vdash e : B}
+    {\Delta; \Gamma \vdash \lambda \ident{x}.\ e : A \to B}
+
+    \inferrule* [right=App]
+    {\Delta; \Gamma \vdash f : A \to B \\
+      \Delta; \Gamma \vdash e : A}
+    {\Delta; \Gamma \vdash f e : B}
+
+    \inferrule* [right=Pair]
+    {\Delta; \Gamma \vdash e_1 : A \\
+      \Delta; \Gamma \vdash e_2 : B}
+    {\Delta; \Gamma \vdash (e_1, e_2) : A \times B}
+
+    \inferrule* [right=Fst]
+    {\Delta; \Gamma \vdash e : A \times B}
+    {\Delta; \Gamma \vdash \kw{fst}\ e : A}
+
+    \inferrule* [right=Snd]
+    {\Delta; \Gamma \vdash e : A \times B}
+    {\Delta; \Gamma \vdash \kw{snd}\ e : B}
+
+    \inferrule* [right=Inl]
+    {\Delta; \Gamma \vdash e : A}
+    {\Delta; \Gamma \vdash \kw{inl}\ e : A + B}
+
+    \inferrule* [right=Inr]
+    {\Delta; \Gamma \vdash e : B}
+    {\Delta; \Gamma \vdash \kw{inr}\ e : A + B}
+
+    \inferrule* [right=Case]
+    {\Delta; \Gamma \vdash e : A + B \\
+      \Delta; \Gamma, \ident{x} : A \vdash f : C \\
+      \Delta; \Gamma, \ident{y} : B \vdash g : C}
+    {\Delta; \Gamma \vdash
+      \kw{case}\ e\ \kw{of}\ \kw{inl}\ \ident{x}. f;
+      \kw{inr}\ \ident{y}. g : C}
+  \end{mathpar}
+
+  \bigskip
+  
+  \textbf{2. Least Fixpoint Types}
+  \begin{mathpar}
+    \inferrule* [right=Cons]
+    {\Delta; \Gamma \vdash e : F[\mu X. F[X]]}
+    {\Delta; \Gamma \vdash \cons{Cons$_F$}\ e : \mu X. F[X]}
+
+    \inferrule* [right=PrimRec]
+    {\Delta; \Gamma \vdash e : F[(\mu X. F[X]) \times A] \to A}
+    {\Delta; \Gamma \vdash \elim{primRec$_F$}\ e : \mu X. F[X] \to A}
+  \end{mathpar}
+
+  \bigskip
+
+  \textbf{3. Clock Abstraction and Application, and Type Equality}
+  \begin{mathpar}
+    \inferrule* [right=$\kappa$-Abs]
+    {\Delta, \kappa; \Gamma \vdash e : A \\ \kappa \not\in \mathit{fc}(\Gamma)}
+    {\Delta; \Gamma \vdash \Lambda \kappa. e : \forall \kappa. A}
+
+    \inferrule* [right=$\kappa$-App]
+    {\Delta; \Gamma \vdash e : \forall \kappa. A \\ \kappa' \in \Delta \\ \kappa' \not\in \mathit{fc}(A)}
+    {\Delta; \Gamma \vdash e[\kappa'] : A[\kappa \mapsto \kappa']}
+      
+    \inferrule* [right=TyEq]
+    {\Delta; \Gamma \vdash e : A \\ \Delta \vdash A \equiv B}
+    {\Delta; \Gamma \vdash e : B}
+  \end{mathpar}
+
+  \bigskip
+
+  \textbf{4. Applicative Functor Structure for $\delay\kappa-$}
+  \begin{mathpar}
+    \inferrule* [right=DePure]
+    {\Delta; \Gamma \vdash e : A \\ \kappa \in \Delta}
+    {\Delta; \Gamma \vdash \kw{pure}\ e : \delay\kappa A}
+    
+    \inferrule* [right=DeApp]
+    {\Delta; \Gamma \vdash f : \delay\kappa (A \to B) \\
+      \Delta; \Gamma \vdash e : \delay\kappa A}
+    {\Delta; \Gamma \vdash f \circledast e : \delay\kappa B}
+  \end{mathpar}
+
+  \bigskip
+  \textbf{5. Fix and Force}
+  \begin{mathpar}
+    \inferrule* [right=Fix]
+    {\Delta; \Gamma \vdash f : \delay\kappa A \to A}
+    {\Delta; \Gamma \vdash \kw{fix}\ f : A}
+
+    \inferrule* [right=Force]
+    {\Delta; \Gamma \vdash e : \forall \kappa. \delay\kappa A}
+    {\Delta; \Gamma \vdash \kw{force}\ e : \forall \kappa. A}
+  \end{mathpar}
+  \caption{Well-typed terms}
+  \label{fig:terms}
+\end{figure*}
+
+The terms of our system are defined by the following grammar:
+\begin{displaymath}
+  \begin{array}{l@{\hspace{0.3em}}r@{\hspace{0.3em}}l}
+    e,f,g &::=& x \sepbar * \sepbar \lambda x.~e \sepbar f e \sepbar (e_1,e_2) \sepbar \kw{fst}~e \sepbar \kw{snd}~e \\
+    & |& \kw{inl}~e \sepbar \kw{inr}~e \sepbar \kw{case}~e~\kw{of}~\kw{inl}~x.f;\kw{inr}~y.g \\
+    & |& \cons{Cons}_F~e \sepbar \elim{primRec}_F~e \sepbar \Lambda \kappa.e \sepbar e[\kappa'] \\
+    & |& \kw{pure}~x \sepbar f \circledast e \sepbar \kw{fix}~f \sepbar \kw{force}~e
+  \end{array}
+\end{displaymath}
+
+The \emph{well-typed} terms of our system are defined by the typing judgement
+$\Delta; \Gamma \vdash e : A$, given by the rules presented in
+\autoref{fig:terms}. Terms are judged to be well-typed with respect to
+a clock variable context $\Delta$, and a typing context $\Gamma$
+consisting of a list of variable : type pairs: $x_1 : A_1, ..., x_n :
+A_n$. We only consider typing contexts where each type is well-formed
+with respect to the clock variable context $\Delta$, and the
+\emph{empty} type variable context. The result type $A$ in the typing
+judgement must also be well-formed with respect to $\Delta$ and the
+empty type variable context.
+
+We have split the typing rules in \autoref{fig:terms} into five
+groups. The first group includes the standard typing rules for the
+simply-typed $\lambda$-calculus with unit, product and sum
+types. Apart from the additional clock variable contexts $\Delta$,
+these rules are entirely standard. The second group contains the rules
+for the inductive types $\mu X. F$. Again, apart from the appearance
+of clock variable contexts, these rules are the standard constructor
+and primitive recursion constructs for inductive types.
+
+The third group of rules cover clock abstraction and application, and
+the integration of the type equality rules we defined in the previous
+section. In the \TirName{$\kappa$-App} rule, we have used the notation
+$A[\kappa \mapsto \kappa']$ to indicate the substitution of the clock
+variable $\kappa'$ for $\kappa$. These rules are as one might expect
+for System F-style quantification with non-trivial type equality,
+albeit that in the \TirName{$\kappa$-App} rule the $\kappa'$ clock
+variable cannot already appear in the type. This disallows us from
+using the same clock variable twice, preventing multiple
+``time-streams'' becoming conflated.
+
+The fourth group of rules state that the clock-indexed guard modality
+supports the $\kw{pure}$ and apply $(\mathord\circledast)$ operations
+of an applicative functor. When we define a denotational semantics of
+our calculus in the next section, these operations will be interpreted
+simply as the identity function and normal function application
+respectively, meaning that the applicative functor laws hold
+trivially.
+
+Finally, the fifth group of rules presents the typing for Nakano's
+guarded $\kw{fix}$ combinator, now indexed by a clock variable, and
+our $\kw{force}$ combinator for removing the guard modality when it is
+protected by a clock quantification.
+
+\subsection{Type operators are functorial}
+\label{sec:functorial}
+
+\newcommand{\ora}[1]{\overrightarrow{#1}}
+
+\begin{figure}[t]
+  \centering
+\begin{displaymath}
+  \begin{array}{l@{}c@{}c@{}c@{}c@{}l}
+    \ident{fmap}_F : \overrightarrow{(A \to B)} \to F[\overrightarrow{A}] \to F[\overrightarrow{B}] \\
+    \begin{array}{@{}l@{}l@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
+    \ident{fmap}_{X_i}&\vec{f}&x & = & f_i~x \\
+    \ident{fmap}_1    &\vec{f}&x & = & * \\
+    \ident{fmap}_{F \times G}&\vec{f}&x & = & (\ident{fmap}_F~\vec{f}~(\kw{fst}~x), \ident{fmap}_G~\vec{f}~(\kw{snd}~x)) \\
+    \ident{fmap}_{F + G}&\vec{f}&x & = & \kw{case}~x~\kw{of}~
+    \begin{array}[t]{@{}l@{}l}
+      \kw{inl}~y. & \kw{inl}~(\ident{fmap}_F~\vec{f}~y) \\
+      \kw{inr}~z. & \kw{inr}~(\ident{fmap}_G~\vec{f}~z)
+    \end{array}\\
+    \ident{fmap}_{A\to F}&\vec{f}&x&=&\lambda a.~\ident{fmap}_F~\vec{f}~(x~a) \\
+    \ident{fmap}_{\delayX\kappa F}&\vec{f}&x&=&\kw{pure}~(\ident{fmap}_F~\vec{f}) \circledast x \\
+    \ident{fmap}_{\forall\kappa.F}&\vec{f}&x&=&\Lambda \kappa. \ident{fmap}_F~\vec{f}~(x[\kappa]) \\
+    \ident{fmap}_{\mu X. F}&\vec{f}&x&=&\elim{primRec}~(\lambda x. \cons{Cons}(\ident{fmap}_F~\vec{f}~(\lambda x.~\kw{snd}~x)~x))~x      
+    \end{array}
+  \end{array}
+\end{displaymath}  
+  \caption{$\ident{fmap}_F$ for all type operators $F$}
+  \label{fig:fmap-syn}
+\end{figure}
+
+In \autoref{sec:main-results-intro} we used a functorial mapping
+function $\ident{fmap}_F : (A \to B) \to F[A] \to F[B]$, which we
+claimed was defined for each strictly positive type operator $F$. We
+define this operator by structural recursion on the derivation of $F$,
+using the clauses in \autoref{fig:fmap-syn}. Due to the presence of
+nested least fixpoint types in our calculus, we handle $n$-ary
+strictly positive type operators.
+
+\subsection{Programming with guarded types and clocks}
+\label{sec:examples}
+
+\paragraph{Lists and Trees, Finite and Infinite} Using the least
+fixpoint type operator $\mu X. F$, we can reconstruct many of the
+usual inductive data types used in functional programming. For
+example, the OCaml declaration:
+\begin{displaymath}
+  \kw{type}~\tyname{list} = \cons{NilList} \mathrel| \cons{ConsList}~\kw{of}~A\times\tyname{list}
+\end{displaymath}
+of finite lists of values of type $A$, can be expressed as the type
+$\mu X. 1 + A \times X$ in our system, where we have replaced the two
+constructors $\cons{NilList}$ and $\cons{ConsList}$ with a use of the
+sum type former. Likewise, the type of binary trees labelled with $A$s
+that we used in \autoref{sec:repmin} can be written as $\mu X. A + X
+\times X$.
+
+A similar data type declaration in Haskell has a different
+interpretation. If we make the following declaration in Haskell:
+\begin{displaymath}
+  \kw{data}~\tyname{List} = \cons{NilList} \mathrel| \cons{ConsList}~A~\tyname{List}
+\end{displaymath}
+then the type $\tyname{List}$ includes both finite lists of $A$s, and
+infinite lists of $A$s (a similar effect can be achieved in OCaml by
+use of the $\kw{lazy}$ type constructor). Haskell's type system is too
+weak to distinguish the definitely finite from the possibly infinite
+case, and it is often left to the documentation to warn the programmer
+that some functions will be non-productive on infinite lists (for
+example, the $\ident{reverse}$ function).
+
+Making use of Nakano's guard modality $\delay\kappa-$, we are able to
+express Haskell-style possibly infinite lists as the guarded inductive
+type $\mu X. 1 + A \times \delay\kappa A$. As we saw in the
+introduction, infinite lists can be constructed using the guarded
+$\kw{fix}$ operator. For example, the infinite repetition of a fixed
+value can be written in our system as:
+\begin{displaymath}
+  \lambda a. \kw{fix}~(\lambda l. \cons{Cons}~(\kw{inr}~(a,l)))
+\end{displaymath}
+If we restrict ourselves to only one clock variable, and always use
+guarded recursive types, then we obtain a programming language similar
+to a monomorphic Haskell, except with a guarantee that all functions
+are productive.
+
+\paragraph{Co-inductive Streams} As we saw in
+\autoref{sec:infinite-to-finite}, programming with guarded types is
+productive, but they are fundamentally incompatible with normal
+inductive types. Recall that if we define infinite streams of $A$s as
+$\tyname{Stream}^\kappa~A = \mu X. A \times \delay\kappa X$, then
+there is no way of defining a function $\ident{tail} :
+\tyname{Stream}^\kappa~A \to \tyname{Stream}^\kappa~A$; the best we
+can do is $\ident{tail} : \tyname{Stream}^\kappa~A \to
+\delay\kappa\tyname{Stream}^\kappa~A$. The rest of the stream only
+exists ``tomorrow''.
+
+Clock quantification fixes this problem. We define:
+\begin{displaymath}
+  \tyname{Stream}~A = \forall \kappa. \mu X. A \times \delay\kappa A
+\end{displaymath}
+Now we can define the two deconstructors for making observations on
+streams, with the right types:
+\begin{displaymath}
+  \begin{array}{@{}l}
+    \begin{array}{@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
+      \defn{head} &:& \tyname{Stream}~A \to A \\
+      \defn{head} &=& \lambda s. \Lambda \kappa. \elim{primRec}~(\lambda x. \kw{fst}~x)~(s[\kappa]) \\
+    \end{array}\\
+    \\
+    \begin{array}{@{}l@{\hspace{0.3em}}c@{\hspace{0.3em}}l}
+      \defn{tail} &:& \tyname{Stream}~A \to \tyname{Stream}~A \\
+      \defn{tail} &=& \lambda s. (\kw{force}~(\Lambda \kappa. \elim{primRec}~
+      \begin{array}[t]{@{}l}
+        (\lambda x. \kw{pure}(\lambda x. \kw{fst}~x) \circledast (\kw{snd}~x)) \\
+        (s[\kappa])))
+      \end{array}
+    \end{array}
+  \end{array}
+\end{displaymath}
+In the definition of $\ident{head}$ we use the fact that $\kappa$
+cannot appear in $A$ to apply the first type equality rule from
+\autoref{sec:type-equality}.
+
+\paragraph{Stream Processing}
+
+Ghani, Hancock and Pattinson \cite{ghani09representations} define a
+type of representations of continuous functions on streams using a
+least fixpoint type nested within a greatest fixpoint. A continuous
+function on streams is a function that only requires a finite amount
+of input for each element of the output. Ghani \etal's type is
+expressed in our system as follows:
+\begin{displaymath}
+  \tyname{SP}~I~O = \forall \kappa. \mu X. \mu Y. (I \to Y) + (O \times \delay\kappa X)
+\end{displaymath}
+where $\tyname{SP}$ stands for ``Stream Processor'' and $\tyname{I}$
+and $\tyname{O}$ stand for input and output respectively. In this
+type, the outer fixpoint permits the production of infinitely many
+$O$s, due to the guarded occurrence of $X$, while the inner fixpoint
+only permits a finite amount of $I$s to be read from the input
+stream. This kind of nested fixpoint is not expressible within Coq,
+but is possible with Agda's support for coinductive types
+\cite{danielsson09mixing}.
+
+Defining the application of an $\tyname{SP}~I~O$ to a stream of $Is$
+serves as an interesting example of programming with guards and
+clocks. We make use of a helper function for unfolding values of type
+$\tyname{SP}~I~O$ that have already been instantiated with some clock:
+\begin{displaymath}
+  \defn{step} : \ident{SP}^\kappa~I~O \to \mu Y. (I \to Y) \times (O \times \delay\kappa(\ident{SP}^\kappa~I~O))
+\end{displaymath}
+where $\ident{SP}^\kappa~I~O$ is $\ident{SP}~I~O$ instantiated with
+the clock $\kappa$.
+
+The definition of stream processor application goes as follows, where
+we permit ourselves a little pattern matching syntactic sugar for
+pairs:
+\begin{displaymath}
+  \begin{array}{@{}l}
+    \defn{apply} : \tyname{SP}~I~O \to \tyname{Stream}~I \to \tyname{Stream}~O \\
+    \defn{apply} = \\
+    \ \begin{array}[t]{@{}l@{}l}
+      \lambda \ident{sp}~\ident{s}.\Lambda \kappa. \kw{fix}(\lambda&\ident{rec}~\ident{sp}~\ident{s}. \\
+      & \elim{primRec}~(\lambda x~s.
+      \begin{array}[t]{@{}l}
+        \kw{case}~x~\kw{of} \\
+        \quad \kw{inl}~\ident{f}.~\ident{f}~(\ident{head}~\ident{s}) (\ident{tail}~\ident{s}) \\
+        \quad \kw{inr}~(\ident{o},\ident{sp'}).\\
+        \quad \quad \cons{Cons}(o,\ident{rec} \circledast \ident{sp'} \circledast \kw{pure}~s))
+      \end{array} \\
+      & \quad (\ident{step}~\ident{sp})) \\
+      & (\ident{sp}~[\kappa])~s
+    \end{array}
+  \end{array}
+\end{displaymath}
+This function consists of two nested loops. The outer loop, expressed
+using $\kw{fix}$, generates the output stream. This loop is running on
+the clock $\kappa$, introduced by the $\Lambda \kappa$. We have
+instantiated the stream processor with the same clock; this causes the
+steps of the output stream to be in lockstep with the output steps of
+the stream processor, exactly as we might expect. The inner loop,
+expressed using $\elim{primRec}$, recurses over the finite list of
+input instructions from the stream processor, pulling items from the
+input stream as needed. The input stream is \emph{not} instantiated
+with the same clock as the stream processor and the output stream: we
+need to access an arbitrary number of elements from the input stream
+for each step of the stream processor, so their clocks cannot run in
+lockstep.
+
+%\paragraph{Producer-Consumer Contracts} We are grateful to Danielsson
+%for the following example of troubled productivity. In Haskell, we
+%might accidentally write
+%\begin{verbatim}
+%nats :: [Integer]
+%nats = 0 : maap (1+) nats
+%
+%maap :: (a -> b) -> [a] -> [b]
+%maap f (a : a' : as) = f a : f a' : maap f as
+%\end{verbatim}
+%This \texttt{maap} is perfectly productive and coincides with
+%\texttt{map} on all well defined infinite lists, yet it is too strict 
+%to be used productively in \texttt{nats}. We can see that
+%\texttt{maap} fails the stricter requirement that only one element
+%need be consumed for each element produced. In our setting, the
+%definition
+%\begin{displaymath}
+%  \begin{array}{l}
+%    \defn{nats} : \tyname{Stream}~\tyname{Natural} \\
+%    \defn{nats} = \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}.
+%      \cons{Cons}(\cons{Zero},\kw{pure}~(\defn{map}~[\kappa]~\cons{Suc})
+%      \circledast \ident{rec}))
+%  \end{array}
+%\end{displaymath}
+%requires
+%\begin{displaymath}
+%    \defn{map} : \forall \kappa.(A\to B)\to\tyname{Stream}^\kappa~A\to\tyname{Stream}^\kappa~B
+%\end{displaymath}
+%which enforces the producer-consumer contract precisely: we cannot
+%wait for tomorrow's input to deliver today's output. The weaker
+%\begin{displaymath}
+%   (A\to B)\to\tyname{Stream}~A\to\tyname{Stream}~B
+%\end{displaymath}
+%makes no such promise and is thus insufficient to document the
+%safe use of $\defn{map}$ as a \emph{component} of productive processes.
+
+
+\paragraph{The Partiality Monad} The partiality monad is a well-known
+coinductively defined monad that allows the definition of functions
+via general recursion, even in a total language. The partiality monad
+is defined as $\tyname{Partial}~A = \nu X. A + X$. Hence, a value of
+type $\tyname{Partial}~A$ consists of a stream of $\kw{inr}$s, either
+continuing forever, or terminating in an $\kw{inl}$ with a value of
+type $A$. Using the partiality monad, possibly non-terminating
+computations can be represented, with non-termination represented by
+an infinite stream that never returns a value. Capretta
+\cite{capretta05general} gives a detailed description.
+
+To express the partiality monad in our system, we decompose it into a
+guarded least fixpoint and clock quantification, just as we did for
+streams and stream processors above:
+\begin{displaymath}
+  \begin{array}{l}
+    \tyname{Partial}^\kappa~A = \mu X. A + \delay\kappa X \\
+    \tyname{Partial}~A = \forall \kappa. \tyname{Partial}^\kappa~A
+  \end{array}
+\end{displaymath}
+For convenience, we define two constructors for
+$\tyname{Partial}^\kappa~A$, corresponding to the two components of
+the sum type:
+\begin{displaymath}
+  \begin{array}{l}
+    \defn{now}^\kappa : A \to \tyname{Partial}^\kappa~A \\
+    \defn{now}^\kappa = \lambda a.~\cons{Cons}~(\kw{inl}~a) \\
+    \\
+    \defn{later}^\kappa : \delay\kappa (\tyname{Partial}^\kappa~A) \to \tyname{Partial}^\kappa~A \\
+    \defn{later}^\kappa = \lambda p.~\cons{Cons}~(\kw{inr}~p)
+  \end{array}
+\end{displaymath}
+It is straightforward to use guarded recursion and clock
+quantification to define the $\ident{return}$ and bind functions that
+demonstrate that $\tyname{Partial}$ is indeed a monad. For an example
+of a possibly non-terminating function that can be expressed using the
+partiality monad, we define the following function
+$\ident{collatz}$. For each natural number $n$, this function only
+terminates if the Collatz sequence starting from $n$ reaches
+$1$. Whether or not this sequence reaches $1$ for all $n$ is a famous
+unsolved question in number theory.
+\begin{displaymath}
+  \begin{array}{@{}l}
+    \defn{collatz} : \tyname{Natural} \to \tyname{Partial}~1 \\
+    \defn{collatz} = \lambda n. \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}~\ident{n}.
+    \begin{array}[t]{@{}l}
+      \kw{if}~n = 1~\kw{then}~\ident{now}^\kappa~(*) \\
+      \kw{else}~\kw{if}~n~\ident{mod}~2 = 0~\kw{then} \\
+      \quad \ident{later}^\kappa~(\ident{rec} \circledast (\kw{pure}~(n/2))) \\
+      \kw{else} \\
+      \quad \ident{later}^\kappa~(\ident{rec} \circledast (\kw{pure}~(3*n + 1))))~n
+    \end{array}
+  \end{array}
+\end{displaymath}
+
+The partiality monad is not a drop-in replacement for general
+recursion. The type $\tyname{Partial}~A$ reveals information about the
+number of steps that it takes to compute a value of type
+$A$. Therefore, it is possible to write a timeout function that runs a
+partial computation for a fixed number of steps before giving up:
+\begin{displaymath}
+  \defn{timeout} : \tyname{Natural} \to \tyname{Partial}~A \to A + 1
+\end{displaymath}
+The partiality monad allows us to write possibly non-terminating
+functions, but also allows us to make more observations on them.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{A denotational semantics for clocks and guards}
+\label{sec:semantics}
+
+We have claimed that the typing discipline from the previous section
+guarantees that programs will be productive. We now substantiate this
+claim by defining a domain-theoretic model of our system, and showing
+that the denotation of a well-typed closed term is never $\bot$. We
+accomplish this by using a multiply-step-indexed interpretation of
+types, where the multiple step indexes correspond to the multiple
+clock variables that may be in scope.
+
+\subsection{Semantics of terms}
+\label{sec:semantics-of-programs}
+
+We interpret terms in (a mild extension of) the standard domain
+theoretic model of the untyped lazy $\lambda$-calculus, described by
+Pitts \cite{PittsAM:compavm}. A feature of this semantics is the
+erasure of anything to do with the guardedness type constructor
+$\delay\kappa-$ and the clock quantification. The $\kw{fix}$ operator
+is interpreted as the domain-theoretic fixpoint, i.e., exactly the
+usual interpretation of general recursion.
+
+We assume a directed complete partial order with bottom
+($\mathrm{DCPO}_\bot$), $D$, satisfying the following recursive domain
+equation:
+\begin{displaymath}
+  D \cong (D \to D)_\bot \oplus (D \times D)_\bot \oplus D_\bot \oplus D_\bot \oplus 1_\bot
+\end{displaymath}
+where $\oplus$ represents the coalesced sum that identifies the $\bot$
+element of all the components. We are guaranteed to be able to obtain
+such a $D$ by standard results about the category $\mathrm{DCPO}_\bot$
+(see, e.g., Smyth and Plotkin \cite{smyth82category}). The five
+components of the right hand side of this equation will be used to
+carry functions, products, the left and right injections for sum types
+and the unit value respectively. We use the following symbols to
+represent the corresponding continuous injective maps into $D$:
+\begin{center}
+  \begin{tabular}{ll}
+    $\semCons{Lam} : (D \to D) \to D$ & $\semCons{Pair} : D \times D \to D$ \\
+    $\semCons{Inl} : D \to D$ & $\semCons{Inr} : D \to D$ \\
+    $\semCons{Unit} : 1 \to D$
+  \end{tabular}  
+\end{center}
+We will write $\semCons{Unit}$ instead of $\semCons{Unit}\ *$.
+
+\begin{figure}[t]
+  \centering
+\begin{eqnarray*}
+  \sem{x}\eta & = & \eta(x) \\
+  \sem{*}\eta & = & \semCons{Unit} \\
+  \sem{\lambda x.\ e}\eta & = & \semCons{Lam}\ (\lambda v.\ \sem{e}(\eta[x \mapsto v])) \\
+  \sem{fe}\eta & = & \left\{
+    \begin{array}{ll}
+      d_f\ (\sem{e}\eta) & \textrm{if}\ \sem{f}\eta = \semCons{Lam}\ d_f \\
+      \bot & \textrm{otherwise}
+    \end{array}
+    \right. \\
+  \sem{(e_1,e_2)}\eta & = & \semCons{Pair}\ (\sem{e_1}\eta, \sem{e_2}\eta) \\
+  \sem{\kw{fst}\ e}\eta & = & \left\{
+    \begin{array}{ll}
+      d_1 & \textrm{if}\ \sem{e}\eta = \semCons{Pair}\ (d_1, d_2) \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right. \\
+  \sem{\kw{snd}\ e}\eta & = & \left\{
+    \begin{array}{ll}
+      d_2 & \textrm{if}\ \sem{e}\eta = \semCons{Pair}\ (d_1, d_2) \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right. \\
+  \sem{\kw{inl}\ e}\eta & = & \semCons{Inl}\ (\sem{e}\eta) \\
+  \sem{\kw{inr}\ e}\eta & = & \semCons{Inr}\ (\sem{e}\eta) \\
+  \left\llbracket
+    \begin{array}{l}
+      \kw{case}\ e\ \kw{of}\\
+      \quad\kw{inl}\ \ident{x}.f\\
+      \quad\kw{inr}\ \ident{y}.g
+    \end{array}
+  \right\rrbracket\eta & = &
+  \left\{
+    \begin{array}{ll}
+      \sem{f}(\eta[x \mapsto d]) & \textrm{if }\sem{e}\eta = \semCons{Inl}\ d \\
+      \sem{g}(\eta[y \mapsto d]) & \textrm{if }\sem{e}\eta = \semCons{Inr}\ d \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right. \\
+\end{eqnarray*}  
+  \caption{Semantics for the simply-typed portion of our system}
+  \label{fig:semantics1}
+\end{figure}
+
+Let $V$ be the set of all possible term-level variable
+names. Environments $\eta$ are modelled as maps from $V$ to elements
+of $D$. Terms are interpreted as continuous maps from environments to
+elements of $D$. The clauses for defining the interpretation of parts
+of our system that are just the simply-typed $\lambda$-calculus are
+standard, and displayed in \autoref{fig:semantics1}. It can be easily
+checked that this collection of equations defines a continuous
+function $\sem{-} : (V \to D) \to D$, since everything is built from
+standard parts.
+
+The applicative functor structure for the guard modality is
+interpreted just as the identity function and normal application, as
+we promised in \autoref{sec:typed-terms}:
+\begin{eqnarray*}
+  \sem{\kw{pure}\ e}\eta & = & \sem{e}\eta \\
+  \sem{f \circledast e}\eta & = & \left\{
+    \begin{array}{ll}
+      d_f\ (\sem{e}\eta) & \textrm{if}\ \sem{f}\eta = \semCons{Lam}\ d_f \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right.
+\end{eqnarray*}
+Our interpretation simply translates the $\kw{fix}$ operator as the
+usual fixpoint operator $\mathrm{fix}\ f = \bigsqcup_n f^n(\bot)$ in
+$\mathrm{DCPO}_\bot$. The $\kw{force}$ operator is interpreted as a
+no-operation.
+\begin{eqnarray*}
+  \sem{\kw{fix}\ f}\eta & = &
+  \left\{
+    \begin{array}{ll}
+      \mathrm{fix}\ d_f & \textrm{if }\sem{f}\eta = \semCons{Lam}\ d_f \\
+      \bot & \textrm{otherwise}
+    \end{array}
+  \right.\\
+  \sem{\kw{force}\ e}\eta & = & \sem{e}\eta
+\end{eqnarray*}
+
+Finally, we interpret the constructor $\cons{Cons$_F$}$ and primitive
+recursion eliminator $\elim{primRec$_F$}$ for least fixpoint
+types. The interpretation of construction is straightforward: the
+constructor itself disappears at runtime, so the interpretation simply
+ignores it:
+\begin{eqnarray*}
+  \sem{\cons{Cons$_F$}\ e}\eta & = & \sem{e}\eta
+\end{eqnarray*}
+
+To define the semantic counterpart of the $\elim{primRec$_F$}$
+operator, we first define a higher-order continuous function
+$\mathrm{primrec} : (D \to D \to D) \to (D \to D) \to D$ in the
+model. This is very similar to how one would define a generic
+$\elim{primRec$_F$}$ in Haskell using general recursion, albeit here
+in an untyped fashion.
+\begin{displaymath}
+  \begin{array}{l}
+    \mathrm{primrec}\ \mathit{fmap}\ f = \\
+    \quad\quad\semCons{Lam}\ (\mathrm{fix}\ (\lambda g x.\ f\ (\mathit{fmap}\ (\semCons{Lam}\ (\lambda x. \semCons{Pair}\ (x, g\ x))))\ x))
+  \end{array}
+\end{displaymath}
+The first argument to $\mathrm{primrec}$ is intended to specify a
+functorial mapping function. For each of the syntactic types $\Delta;
+\Theta \vdash F : \sortType$ defined in \autoref{fig:types}, we define
+a suitable $\mathrm{fmap_F} : D^{|\Theta|} \to D \to D$, where
+$|\Theta|$ is the number of type variables in $\Theta$. This
+definition is presented in \autoref{fig:semantic-fmap}.
+
+\begin{figure}[t]
+  \begin{eqnarray*}
+    \mathrm{fmap_X}\ \vec{f}\ x & = & d_f(x)\quad (f_X = \semCons{Lam}\ d_f) \\
+    \mathrm{fmap_1}\ \vec{f}\ x & = & \semCons{Unit} \\
+    \mathrm{fmap_{F \times G}}\ \vec{f}\ (\semCons{Pair}\ (x,y)) & = & \semCons{Pair}\ (\mathrm{fmap_F}\ \vec{f}\ x, \mathrm{fmap_G}\ \vec{f}\ y) \\
+    \mathrm{fmap_{F + G}}\ \vec{f}\ (\semCons{Inl}\ x) & = & \semCons{Inl}\ (\mathrm{fmap_F}\ \vec{f}\ x) \\
+    \mathrm{fmap_{F + G}}\ \vec{f}\ (\semCons{Inr}\ x) & = & \semCons{Inr}\ (\mathrm{fmap_G}\ \vec{f}\ x) \\
+    \mathrm{fmap_{A \to F}}\ \vec{f}\ (\semCons{Lam}\ g) & = & \semCons{Lam}\ (\lambda v. \mathrm{fmap_F}\ \vec{f}\ (g\ v)) \\
+    \mathrm{fmap_{\delayX\kappa F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
+    \mathrm{fmap_{\forall\kappa.F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
+    \mathrm{fmap_{\mu X. F}}\ \vec{f}\ x & = &
+    \begin{array}[t]{@{}l}
+      \mathrm{primrec}\ (\mathrm{fmap_F}\ \vec{f})\ \\
+      \quad\quad\quad\quad(\mathrm{fmap_F}\ \vec{f}\ \mathrm{snd})\ x
+    \end{array}
+  \end{eqnarray*}
+  where
+  \begin{displaymath}
+    \mathrm{snd}\ (\semCons{Pair}\ (x,y)) = y
+  \end{displaymath}
+  All unhandled cases are defined to be equal to $\bot$.
+  \caption{Semantic $\mathrm{fmap_F}$ for $\Delta; \Theta \vdash F : \sortType$}
+  \label{fig:semantic-fmap}
+\end{figure}
+
+With these definitions we can define the interpretation of the
+syntactic $\elim{primRec$_F$}$ operator. Note that the syntactic type
+constructor $F$ here always has exactly one free type variable, so
+$\mathrm{fmap_F}$ has type $D \to D \to D$, as required by
+$\mathrm{primrec}$.
+\begin{displaymath}
+  \begin{array}{l}
+    \sem{\elim{primRec$_F$}\ f}\eta = \\
+    \quad\quad\left\{
+      \begin{array}{ll}
+        \mathrm{primrec}\ \mathrm{fmap_F}\ d_f & \textrm{if }\sem{f}\eta = \semCons{Lam}\ d_f \\
+        \bot & \textrm{otherwise}
+      \end{array}
+    \right.
+  \end{array}
+\end{displaymath}
+
+This completes the interpretation of the terms of our programming
+language in our untyped model. We now turn to the semantic meaning of
+types, with the aim of showing, in \autoref{sec:semantic-soundness},
+that each well-typed term's interpretation is semantically well-typed.
+
+\subsection{Interpretation of clock variables}
+\label{sec:clock-envs}
+
+For a clock context $\Delta$, we define $\clkSem{\Delta}$ to be the
+set of clock environments: mappings from the clock variables in
+$\Delta$ to the natural numbers. We use $\delta, \delta'$ etc. to
+range over clock environments. For $\delta$ and $\delta'$ in
+$\clkSem{\Delta}$, we say that $\delta \sqsubseteq \delta'$ (in
+$\clkSem\Delta$) if for all $\kappa \in \Delta$, $\delta(\kappa) \leq
+\delta'(\kappa)$. The intended interpretation of some $\delta \in
+\clkSem\Delta$ is that $\delta$ maps each clock $\kappa$ in $\Delta$
+to a natural number stating how much time that clock has left to
+run. The ordering $\delta \sqsubseteq \delta'$ indicates that the
+clocks in $\delta$ have at most as much time left as the clocks in
+$\delta'$. We use the notation $\delta[\kappa \mapsto n]$ to denote
+the clock environment mapping $\kappa$ to $n$ and $\kappa'$ to
+$\delta(\kappa')$ when $\kappa \not= \kappa'$.
+
+\subsection{Semantic types}
+\label{sec:semantic-types}
+
+We interpret types as $\clkSem\Delta$-indexed families of partial
+equivalence relations (PERs) over the semantic domain $D$. Recall that
+a PER on $D$ is a binary relation on $D$ that is symmetric and
+transitive, but not necessarily reflexive. Since PERs are binary
+relations, we will treat them as special subsets of the cartesian
+product $D \times D$. We write $\PER(D)$ for the set of all partial
+equivalence relations on $D$, and $\top_D$ for the PER $D \times D$.
+We require that our $\clkSem\Delta$-indexed families of PERs
+contravariantly respect the partial ordering on elements of
+$\clkSem\Delta$. This ensures that, as the time left to run on clocks
+increases, the semantic type becomes ever more precise. When we
+interpret clock quantification as intersection over all
+approximations, we capture the common core of all the approximations.
+
+Formally, a semantic type for a clock context $\Delta$ is a function
+$A : \clkSem\Delta \to \PER(D)$, satisfying contravariant Kripke
+monotonicity: for all $\delta' \sqsubseteq \delta$, $A\delta \subseteq
+A\delta'$. We write $\ClkPER(\Delta)$ for the collection of all
+semantic types for the clock context $\Delta$. In
+\autoref{sec:fixpoint-types}, we will formally consider morphisms
+between semantic types, and so turn each $\ClkPER(\Delta)$ into a
+category. Note that we do \emph{not} require that any of our PERs are
+admissible. Admissible PERs always include the pair $(\bot,\bot)$,
+precisely the values we wish to exclude.
+
+We now define semantic counterparts for each of the syntactic type
+constructors we presented in \autoref{sec:types}.
+
+\paragraph{Unit, Product, Coproduct and Function Types}
+
+The constructions for unit, product and coproduct types are
+straightforward. The unit type will be interpreted by a constant
+family of PERs:
+\begin{displaymath}
+  1\delta = \{(\semCons{Unit}, \semCons{Unit})\}
+\end{displaymath}
+This trivially satisfies Kripke monotonicity.
+
+Given semantic types $A$ and $B$, their product is defined to be
+\begin{displaymath}
+  (A \times B)\delta =
+  \left\{
+    \begin{array}{l}
+      (\semCons{Pair}(x,y),\semCons{Pair}(x',y')) \\
+      \quad\quad\sepbar (x,x') \in \sem{A}\delta \land (y,y') \in \sem{B}\delta 
+    \end{array}
+  \right\}
+\end{displaymath}
+and their coproduct is
+\begin{displaymath}
+  (A + B)\delta =
+  \begin{array}{l}
+    \{ (\semCons{Inl}(x), \semCons{Inl}(x')) \mathrel| (x,x') \in \sem{A}\delta \} \\
+    \quad \cup \\
+    \{ (\semCons{Inr}(y),\semCons{Inr}(y')) \mathrel| (y,y') \in \sem{B}\delta \}
+  \end{array}
+\end{displaymath}
+Since $A$ and $B$ are assumed to be semantic types, it immediately
+follows that $A \times B$ and $A + B$ are semantic types.
+
+To interpret function types, we use the usual definition for
+Kripke-indexed logical relations, by quantifying over all smaller clock
+environments. Given semantic types $A$ and $B$, we define:
+\begin{displaymath}
+  (A \to B)\delta = \left\{
+    \begin{array}{l}
+      (\semCons{Lam}(f),\semCons{Lam}(f')) \\
+      \quad \sepbar \forall \delta' \sqsubseteq \delta, (x,x') \in A\delta'.\ (fx,f'x') \in B\delta'
+    \end{array}
+  \right\}
+\end{displaymath}
+It follows by the standard argument for Kripke logical relations that
+this family of PERs is contravariant in clock environments.
+
+\paragraph{Guarded Modality} Given a semantic type $A$, we define the
+semantic guard modality $\delay\kappa$ as follows, where $\kappa$ is a
+member of the clock context $\Delta$:
+\begin{displaymath}
+  (\delay\kappa A)\delta = \left\{
+    \begin{array}{ll}
+      \top_D & \textrm{if }\delta(\kappa) = 0 \\
+      A(\delta[\kappa \mapsto n]) & \textrm{if }\delta(\kappa) = n + 1
+    \end{array}
+  \right.
+\end{displaymath}
+The semantic type operator $\delay\kappa$ acts differently
+depending on the time remaining on the clock $\kappa$ in the current
+clock environment $\delta$. When the clock has run to zero,
+$\delay\kappa A$ becomes completely uninformative, equating all pairs
+of elements in the semantic domain $D$. If there is time remaining,
+then $\delay\kappa A$ equates a pair iff $A$ would with one fewer
+steps remaining. For Kripke monotonicity, we want to prove that
+$(d,d') \in (\delay\kappa A)\delta$ implies $(d,d') \in (\delay\kappa
+A)\delta'$ when $\delta' \sqsubseteq \delta$. If $\delta'(\kappa) = 0$
+then $(\delay\kappa A)\delta' = D \times D \ni (d,d')$. If
+$\delta'(\kappa) = n' + 1$ then $\delta(\kappa) = n + 1$ with $n' \leq
+n$. So $(d,d') \in A(\delta[\kappa \mapsto n])$, and so by $A$'s Kripke
+monotonicity, $(d,d') \in A(\delta'[\kappa \mapsto n']) =
+(\delay\kappa A)\delta'$.
+
+\paragraph{Clock Quantification}
+The semantic counterpart of clock quantification takes us from
+semantic types in $\ClkPER(\Delta, \kappa)$ to semantic types in
+$\ClkPER(\Delta)$. Given a semantic type $A$ in $\ClkPER(\Delta,
+\kappa)$, we define
+\begin{displaymath}
+  \forall_\kappa A = \bigcap_{n \in \mathbb{N}} A(\delta[\kappa \mapsto n])
+\end{displaymath}
+For Kripke monotonicity, if $(d,d') \in (\forall\kappa. A)\delta$ then
+$\forall n.\ (d,d') \in A(\delta[\kappa \mapsto n])$. Since $A$ is a
+semantic type, $\forall n.\ (d,d') \in A(\delta'[\kappa \mapsto n])$,
+hence $(d,d') \in (\forall\kappa. A)\delta'$.
+
+\paragraph{Complete Lattice Structure} In order to define the semantic
+counterpart of the least fixpoint type operator, we make use of the
+lattice structure of $\ClkPER(\Delta)$. Given $A, B \in
+\ClkPER(\Delta)$, we define a partial order: $A \subseteq B$ if
+$\forall \delta. A\delta \subseteq B\delta$. It is easy to see that
+$\ClkPER(\Delta)$ is closed under arbitrary intersections, and so is a
+complete lattice.
+
+Each of the semantic type constructors above is monotonic with respect
+to the partial order on $\ClkPER(\Delta)$ (with the obvious proviso
+that $A \to B$ is only monotonic in its second argument).
+
+\paragraph{Least Fixpoint Types}
+We make use of the Knaster-Tarski theorem \cite{tarski55lattice} to
+produce the least fixpoint of a monotone function on
+$\ClkPER(\Delta)$. See Loader \cite{loader97equational} for an similar
+usage in a setting without guarded recursion. Given a monotone
+function $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$, we define:
+\begin{displaymath}
+  (\mu F) = \bigcap \{ A \in \ClkPER(\Delta) \sepbar FA \subseteq A \}
+\end{displaymath}
+For any monotone $F$, $\mu F$ is immediately a semantic type by
+construction, since semantic types are closed under intersection. As
+an initial step towards semantic type soundness for our calculus, we
+demonstrate a semantic well-typedness result for the
+$\mathrm{primrec}$ function we defined in
+\autoref{sec:semantics-of-programs}.
+
+\begin{lemma}\label{lem:primrec-well-typed}
+  Let $F : \ClkPER(\Delta) \to \ClkPER(\Delta)$ be a monotone
+  function.  Let $\mathrm{fmap} : D \to D \to D$ be such that for all
+  $\delta \in \sem{\Delta}$, for all $A,B \in \ClkPER(\Delta)$, and
+  for all $(g,g') \in (A \to B)\delta$ and $(x,x') \in FA\delta$, we
+  have $(\mathrm{fmap}\ g\ x, \mathrm{fmap}\ g'\ x') \in FB\delta$.
+  Then, for all $\delta \in \sem{\Delta}$ and for all $(f,f') \in
+  (F(\mu F \times C) \to C)\delta$, where $C$ is a semantic type, we
+  have
+  \begin{displaymath}
+    (\mathrm{primrec}\ \mathrm{fmap}\ f, \mathrm{primrec}\ \mathrm{fmap}\ f') \in (\mu F \to C)\delta
+  \end{displaymath}
+\end{lemma}
+
+\begin{proof}
+  (Sketch) By induction on the least fixpoint $F(\mu F) = \mu F$,
+  using the Knaster-Tarski theorem.
+\end{proof}
+
+This lemma only states that our semantic $\mathrm{primrec}$ recursion
+operator is semantically well-typed. We will show in
+\thmref{thm:initial-f-algebra} that $\mathrm{primrec}$ also witnesses
+$\mu F$ as the carrier of the initial $F$-algebra, as we claimed in
+\autoref{sec:main-results-intro}.
+
+\subsection{Interpretation of syntactic types}\label{sec:type-interp}
+
+\begin{figure}[t]
+  \centering
+  \begin{eqnarray*}
+    \tySem{1}\theta & = & 1 \\
+    \tySem{X}\theta & = & \theta(X) \\
+    \tySem{A \times B}\theta & = & \tySem{A}\theta \times \tySem{B}\theta \\
+    \tySem{A + B}\theta & = & \tySem{A}\theta + \tySem{B}\theta \\
+    \tySem{A \to B}\theta & = & \tySem{A}\emptyset \to \tySem{B}\theta \\
+    \tySem{\delay\kappa A}\theta & = & \delay\kappa (\tySem{A}\theta) \\
+    \tySem{\forall \kappa. A}\theta & = & \forall_\kappa (\tySem{A}(\theta\mathord\uparrow_\kappa)) \\
+    \tySem{\mu X. F}\theta & = & \mu (\lambda X. \tySem{F}(\theta, X))
+  \end{eqnarray*}
+  \caption{Interpretation of well-formed types}
+  \label{fig:type-interp}
+\end{figure}
+
+A well-formed type $\Delta; \Theta \vdash A : \sortType$ is
+interpreted as monotonic function $\tySem{A} :
+\ClkPER(\Delta)^{|\Theta|} \to \ClkPER(\Delta)$, where $|\Theta|$
+denotes the number of type variables in $\Theta$. The interpretation
+is defined in the clauses in \autoref{fig:type-interp}. These clauses
+make use of the constructions of semantic types defined in the
+previous subsection. In the clause for $\forall \kappa$, we make use
+of the ``clock weakening'' operator $-\mathord\uparrow_\kappa$ which
+takes a collection of semantic types in $\ClkPER(\Delta)^{|\Theta|}$
+to semantic types in $\ClkPER(\Delta,\kappa)^{|\Theta|}$ by pointwise
+restriction of clock environments in $\sem{\Delta, \kappa}$ to clock
+environments in $\sem{\Delta}$.
+
+The next lemma states that syntactic substitution and semantic
+substitution commute. The proof is a straightforward induction on the
+well-formed type $A$. Note the side condition that $\kappa \not\in
+\mathit{fc}(A)$, matching the side condition on the
+\TirName{$\kappa$-App} typing rule.
+
+\begin{lemma}\label{lem:substitution-lemma}
+  Assume that $\Delta; \Theta \vdash A : \sortType$, $\kappa, \kappa'
+  \in \Delta$ and $\kappa' \not\in \mathit{fc}(A)$. Then for all
+  $\delta \in \sem{\Delta[\kappa\mapsto\kappa']}$ and $\theta \in
+  \ClkPER(\Delta)^{|\Theta|}$,
+  \begin{displaymath}
+    \sem{A}\theta (\delta[\kappa \mapsto \delta(\kappa')]) = \sem{A[\kappa\mapsto\kappa']}(\theta[\kappa\mapsto\kappa'])\delta.
+  \end{displaymath}
+\end{lemma}
+
+The syntactic type equality judgement $\Delta; \Theta \vdash A \equiv
+B : \sortType$ that we defined in \autoref{sec:type-equality} is
+interpreted as equality of semantic types. The following lemma states
+that this interpretation is sound.
+
+\begin{lemma}\label{lem:type-equality}
+  If $\Delta; \Theta \vdash A \equiv B : \sortType$ then for all
+  $\theta \in \ClkPER(\Delta)^{|\Theta|}$, $\sem{A}\theta =
+  \sem{B}\theta$.
+\end{lemma}
+
+The next lemma states that we may use the semantic $\mathrm{fmap_F}$
+functions defined in \autoref{fig:semantic-fmap} with the
+$\mathrm{primrec}$ operator, by showing that $\mathrm{fmap_F}$ always
+satisfies the hypotheses of \lemref{lem:primrec-well-typed}.
+
+\begin{lemma}\label{lem:sem-fmap-well-typed}
+  For all $\Delta; \Theta \vdash F : \sortType$, the $\mathrm{fmap}_F$
+  defined in \autoref{fig:semantic-fmap} are all semantically
+  well-typed: For all $\delta \in \sem{\Delta}$, for all $\overrightarrow{A,B}
+  \in \ClkPER(\Delta)$, and for all $\overrightarrow{(g,g') \in (A \to B)\delta}$
+  and $(x,x') \in FA\delta$, we have $(\mathrm{fmap_F}\ \overrightarrow{g}\ x,
+  \mathrm{fmap_F}\ \overrightarrow{g'}\ x') \in FB\delta$.
+\end{lemma}
+
+It may seem that we could prove this lemma by using the syntactic
+definition of $\ident{fmap}$ from \autoref{fig:fmap-syn} and then
+applying \thmref{thm:semantic-soundness}. However, the semantic
+well-typedness of our interpretation of $\elim{primRec}$ depends on
+the semantic well-typedness of $\mathrm{fmap}$, so we must prove this
+lemma directly in the model to break the circularity.
+
+\subsection{Semantic type soundness}
+\label{sec:semantic-soundness}
+
+We now state our first main result: the semantic type soundness
+property of our system. To state this result, we define the semantic
+interpretation of contexts as a clock-environment indexed collection
+of PERs over environments:
+\begin{displaymath}
+  \sem{\Gamma}\delta = \{(\eta, \eta') \mathrel| \forall (\ident{x} : A) \in \Gamma.\ (\eta(\ident{x}), \eta'(\ident{x})) \in \sem{A}\delta \}
+\end{displaymath}
+
+\begin{theorem}\label{thm:semantic-soundness}
+  If $\Delta; \Gamma \vdash e : A$, then for all $\delta \in
+  \sem{\Delta}$ and $(\eta,\eta') \in \sem{\Gamma}\delta$,
+  $(\sem{e}\eta,\sem{e}\eta') \in \sem{A}\delta$.
+\end{theorem}
+
+\begin{proof}
+  (Sketch) By induction on the derivation of $\Delta; \Gamma \vdash e
+  : A$. The most interesting cases are for $\kw{fix}$ and
+  $\elim{primRec}$. In essence, the case for $\kw{fix}$ goes through
+  by induction on the value of the counter assigned to the clock
+  variable $\kappa$ in the current clock environment. The case for
+  $\elim{primRec}$ is given by \lemref{lem:primrec-well-typed} and
+  \lemref{lem:sem-fmap-well-typed}.
+\end{proof}
+
+\begin{corollary}
+  If $-; - \vdash e : A$ then for all $\eta$, $\sem{e}\eta \not=
+  \bot$.
+\end{corollary}
+By this corollary, the denotation of a closed program is never $\bot$,
+so well-typed programs always yield a proper value.  When the result
+type $A$ is the stream type $\forall \kappa. \mu X. B \times
+\delay\kappa X$, we can deduce that the denotation of $e$ will always
+be infinite streams of elements of $B$. We further elaborate this
+point in the next section, showing that this type is the carrier of
+the final $(B \times -)$-coalgebra.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Properties of fixpoint types}
+\label{sec:fixpoint-types}
+
+Using the denotational model of the previous section, we are now in a
+position to formally state and sketch the proofs of the properties of
+fixpoint types that we claimed in
+\autoref{sec:main-results-intro}. Our claimed results are statements
+in category theoretic language about the initiality and finality of
+various (co)algebras. Therefore, we first construct suitable
+categories to work in.
+
+\begin{definition}
+  For each clock variable context $\Delta$, the category
+  $\ClkPER(\Delta)$ has as objects semantic types over
+  $\Delta$. Morphisms $f : A \to B$ are continuous functions $f : D
+  \to D$ such that for all $\delta \in \sem{\Delta}$ and $(a,a') \in
+  A\delta$, $(fa, fa') \in B\delta$. Two morphisms $f$,$f'$ are
+  considered equivalent if for all $\delta \in \sem{\Delta}$ and
+  $(a,a') \in A\delta$, $(fa, f'a') \in B\delta$.
+\end{definition}
+
+Each well-typed term $\Delta; x : A \vdash e : B$ defines a morphism
+$\sem{e} : \sem{A} \to \sem{B}$ in $\ClkPER(\Delta)$. We can define
+equality between terms in our syntactic type system in terms of the
+equality on morphisms in this definition. Moreover, each well-formed
+type operator $\Delta; X \vdash F[X] : \sortType$ defines a (strong)
+realisable endofunctor on $\ClkPER(\Delta)$ that is monotonic on
+objects, using the semantic $\mathrm{fmap}_F$ defined in
+\autoref{fig:semantic-fmap} to define the action on morphisms. We have
+already checked (\lemref{lem:sem-fmap-well-typed}) that this is
+well-defined, and it is straightforward to check that the usual
+functor laws hold. In what follows, whenever we refer to an
+endofunctor on $\ClkPER(\Delta)$, we mean a realisable functor that is
+monotonic on objects, and we will use $\mathit{fmap}_F$ to refer to
+the action of a functor $F$ on morphisms.
+
+\paragraph{Initial Algebras} Recall that, for any functor $F$, an
+$F$-algebra is a pair of an object $A$ and a morphism $k : FA \to
+A$. A homomorphism $h$ between $(A,k_A)$ and
+$(B,k_B)$ is a morphism $h : A \to B$ such that $h \circ k_A = k_B
+\circ \mathit{fmap}_F~h$. An \emph{initial} $F$-algebra is an
+$F$-algebra $(A,k_A)$ such that for any other $F$-algebra $(B,k_B)$,
+there is a unique homomorphism $h : (A,k_A) \to (B,k_B)$.
+
+\begin{theorem}\label{thm:initial-f-algebra}
+  If $F$ is an endofunctor on $\ClkPER(\Delta)$, then $\mu F$ is the
+  carrier of an initial $F$-algebra.
+\end{theorem}
+
+\begin{proof} (Sketch) Since $\mu F$ is a fixpoint of $F$, the
+  morphism $F(\mu F) \to \mu F$ is simply realised by the identity
+  map. Given any other $F$-algebra $(B,k_B)$, define a morphism $\mu F
+  \to B$ using the $\mathrm{primrec}$ operator from
+  \lemref{lem:primrec-well-typed}. Checking that this gives an
+  $F$-algebra homomorphism is straightforward, proving uniqueness uses
+  induction on elements of $\mu F$, by the Knaster-Tarski theorem.
+\end{proof}
+
+\paragraph{Guarded Final Co-Algebras} \thmref{thm:initial-f-algebra}
+applies to all functors $F$, and in particular functors of the form
+$F(\delay\kappa-)$ on the category $\ClkPER(\Delta, \kappa)$. As well
+as $\mu (F(\delay\kappa -))$ being the carrier of an initial algebra,
+it is also the carrier of a final $F(\delay\kappa-)$-coalgebra.
+
+Coalgebras are the formal dual of algebras: for an endofunctor $F$, an
+$F$-coalgebra is a pair of an object $A$ and a morphism $k_A : A \to
+FA$. A homomorphism $h : (A,k_A) \to (B,k_B)$ of coalgebras is a
+morphism $h : A \to B$ such that $\mathit{fmap}_F~h \circ k_A =
+k_B\circ h$. A \emph{final} $F$-coalgebra is an $F$-coalgebra
+$(B,k_B)$ such that for any other $F$-coalgebra $(A,k_A)$, there is a
+unique $F$-coalgebra homomorphism $\mathrm{unfold}~k_A : (A,k_A) \to
+(B,k_B)$.
+
+\begin{theorem}\label{thm:final-f-de-coalgebra}
+  If $F$ is an endofunctor on $\ClkPER(\Delta)$, then $\mu
+  (F(\delay\kappa-))$ is the carrier of a final
+  $F(\delay\kappa-)$-coalgebra in $\ClkPER(\Delta,\kappa)$.
+\end{theorem}
+
+\begin{proof} (Sketch) As for \thmref{thm:initial-f-algebra}, since
+  $\mu (F(\delay\kappa-))$ is a fixpoint of $F(\delay\kappa-)$, the
+  morphism $\mu (F(\delay\kappa-)) \to F(\delay\kappa(\mu (F(\delay\kappa-))))$ is simply realised by the identity
+  map. Given any other $F$-coalgebra $(A,k_A)$, define a morphism
+  $\mathrm{unfold}~k_A : A \to \mu(F(\delay\kappa-))$ as
+  $\mathrm{fix}~(\lambda g~a.~\mathrm{fmap}_F~g~(k_A~a))$. It is
+  straightforward to prove that this is an $F$-coalgebra
+  homomorphism. Uniqueness is proved for each possible clock
+  environment $\delta$ by induction on $\delta(\kappa)$.
+\end{proof}
+
+The syntactic counterpart of the construction we used in this proof is
+exactly the term we used in \autoref{sec:main-results-intro} for the
+definition of $\ident{unfold}$. It is also easy to check that the term
+$\ident{deCons}$ we defined there is semantically equivalent to the
+identity. Therefore, \thmref{thm:final-f-de-coalgebra} substantiates
+the claim we made in \autoref{sec:main-results-intro} that $\mu
+X. F[\delay\kappa-]$ is the syntactic description of the carrier of a
+final $F[\delay\kappa-]$-coalgebra.
+
+\paragraph{Final Co-Algebras} \thmref{thm:final-f-de-coalgebra} gives
+final coalgebras in the categories $\ClkPER(\Delta, \kappa)$, where we
+have a spare clock variable. By using clock quantification, we can
+close over this clock variable, and get the final
+$F$-coalgebra, not just the final $F(\delay\kappa-)$-coalgebra.
+
+\begin{theorem}\label{thm:final-f-coalgebra}
+  For an endofunctor $F$ on $\ClkPER(\Delta)$, $\forall_\kappa. \mu
+  (F(\delay\kappa-))$ is the carrier of a final $F$-coalgebra in
+  $\ClkPER(\Delta)$.
+\end{theorem}
+
+\begin{proof}
+  (Sketch) Almost identical to the proof for
+  \thmref{thm:final-f-de-coalgebra}.
+\end{proof}
+
+This final theorem, along with the examples we presented in
+\autoref{sec:examples}, substantiates our claim that the combination
+of clocks and guards that we have presented in this paper is a viable
+and comfortable setting in which to productively coprogram.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusions and Further Work}
+\label{sec:conclusions}
+
+We have presented a semantics for a small total calculus with
+primitive recursion for inductive data and a compositional treatment
+of corecursion, ensuring causality via the applicative structure of a
+\emph{local} notion of time. In effect, we use time-based typing to
+grow a given total language, where all computation terminates within
+one `day', into a larger total language, where additional recursion is
+justified clearly by the advancing clock. Functions from clocked
+inputs to clocked outputs enforce precise producer-consumer
+contracts---today's output must be computed only from today's
+input---documenting their utility as components of productive
+processes. Quantifying clock variables localises the time stream to a
+particular construction whose clients can then use it `in the moment'.
+The method, made local, can be iterated, with inner clocks justifying
+the totality of computations within one `day' of an outer clock.
+
+At present, however, we have used local time only to justify
+productive corecursion, with only primitive recursion for inductive
+types. It seems pressing to ask whether local time might similarly
+liberalise termination checking, with a local clock measuring time into
+the past and ensuring that recursive calls receive old enough inputs
+that their outputs are ready when we need them. We are actively
+seeking a semantics for such a system, but it currently seems more
+difficult to pin down.
+
+In due course, we should like to grow this experimental calculus to a
+full blown dependent type theory where (co)recursive constructions are
+checked to be total within nested local time streams, then exported to their
+clients without clocking. At least we have now established what local
+time streams are and how to extract productive processes from them.
+
+
+\paragraph{Acknowledgements} We would like to thank Lars Birkedal,
+Rasmus M{\o}gelberg, and Paula Severi for extremely useful comments
+and discussions.
+
+\vfill\eject
+\begin{thebibliography}{24}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Abel(2004)]{abel04termination}
+A.~Abel.
+\newblock Termination checking with types.
+\newblock \emph{ITA}, 38\penalty0 (4):\penalty0 277--319, 2004.
+
+\bibitem[Appel and McAllester(2001)]{appel01indexed}
+A.~W. Appel and D.~A. McAllester.
+\newblock An indexed model of recursive types for foundational proof-carrying
+  code.
+\newblock \emph{ACM Trans. Program. Lang. Syst.}, 23\penalty0 (5):\penalty0
+  657--683, 2001.
+
+\bibitem[Bird(1984)]{bird84circular}
+R.~S. Bird.
+\newblock {Using Circular Programs to Eliminate Multiple Traversals of Data}.
+\newblock \emph{Acta Informatica}, 21:\penalty0 239--250, 1984.
+
+\bibitem[Birkedal and M{\o}gelberg(2013)]{birkedal13intensional}
+L.~Birkedal and R.~E. M{\o}gelberg.
+\newblock Intensional type theory with guarded recursive types qua fixed points
+  on universes.
+\newblock In \emph{ACM/IEEE Symposium on Logic in Computer Science (LICS
+  2013)}, 2013.
+
+\bibitem[Birkedal et~al.(2010)Birkedal, Schwinghammer, and
+  St{\o}vring]{birkedal10metric}
+L.~Birkedal, J.~Schwinghammer, and K.~St{\o}vring.
+\newblock A metric model of guarded recursion.
+\newblock In \emph{Presented at FICS 2010}, 2010.
+
+\bibitem[Birkedal et~al.(2012)Birkedal, M{\o}gelberg, Schwinghammer, and
+  St{\o}vring]{birkedal12first}
+L.~Birkedal, R.~E. M{\o}gelberg, J.~Schwinghammer, and K.~St{\o}vring.
+\newblock First steps in synthetic guarded domain theory: step-indexing in the
+  topos of trees.
+\newblock \emph{Log. Meth. in Computer Science}, 8\penalty0 (4), 2012.
+
+\bibitem[Capretta(2005)]{capretta05general}
+V.~Capretta.
+\newblock General recursion via coinductive types.
+\newblock \emph{Log. Meth. in Computer Science}, 1\penalty0 (2), 2005.
+
+\bibitem[Danielsson(2010)]{danielsson10beating}
+N.~A. Danielsson.
+\newblock Beating the productivity checker using embedded languages.
+\newblock In \emph{Workshop on Partiality and Recursion in Interactive Theorem
+  Provers (PAR 2010)}, volume~43 of \emph{EPTCS}, pages 29--48, 2010.
+
+\bibitem[Danielsson and Altenkirch(2009)]{danielsson09mixing}
+N.~A. Danielsson and T.~Altenkirch.
+\newblock Mixing induction and coinduction.
+\newblock Draft, 2009.
+
+\bibitem[Dreyer et~al.(2011)Dreyer, Ahmed, and Birkedal]{dreyer11logical}
+D.~Dreyer, A.~Ahmed, and L.~Birkedal.
+\newblock Logical step-indexed logical relations.
+\newblock \emph{Log. Meth. in Computer Science}, 7\penalty0 (2), 2011.
+
+\bibitem[Ghani et~al.(2009)Ghani, Hancock, and
+  Pattinson]{ghani09representations}
+N.~Ghani, P.~Hancock, and D.~Pattinson.
+\newblock Representations of stream processors using nested fixed points.
+\newblock \emph{Log. Meth. in Computer Science}, 5\penalty0 (3), 2009.
+
+\bibitem[Gim{\'e}nez(1994)]{gimenez94codifying}
+E.~Gim{\'e}nez.
+\newblock Codifying guarded definitions with recursive schemes.
+\newblock In \emph{Types for Proofs and Programs, International Workshop
+  TYPES'94}, volume 996 of \emph{Lecture Notes in Computer Science}, pages
+  39--59, 1994.
+
+\bibitem[Hutton and Jaskelioff(2011)]{hutton11representing}
+G.~Hutton and M.~Jaskelioff.
+\newblock Representing contractive functions on streams.
+\newblock Submitted, 2011.
+
+\bibitem[Krishnaswami and Benton(2011{\natexlab{a}})]{krishnaswami11semantic}
+N.~R. Krishnaswami and N.~Benton.
+\newblock A semantic model for graphical user interfaces.
+\newblock In \emph{ACM SIGPLAN international conference on Functional
+  Programming, ICFP 2011}, pages 45--57, 2011{\natexlab{a}}.
+
+\bibitem[Krishnaswami and
+  Benton(2011{\natexlab{b}})]{krishnaswami11ultrametric}
+N.~R. Krishnaswami and N.~Benton.
+\newblock Ultrametric semantics of reactive programs.
+\newblock In \emph{IEEE Symposium on Logic in Computer Science, LICS 2011},
+  pages 257--266, 2011{\natexlab{b}}.
+
+\bibitem[Launchbury and {Peyton Jones}(1994)]{launchbury94lazy}
+J.~Launchbury and S.~L. {Peyton Jones}.
+\newblock Lazy functional state threads.
+\newblock In \emph{Proceedings of the ACM SIGPLAN'94 Conference on Programming
+  Language Design and Implementation (PLDI)}, pages 24--35, 1994.
+
+\bibitem[Loader(1997)]{loader97equational}
+R.~Loader.
+\newblock {Equational Theories for Inductive Types}.
+\newblock \emph{Annals of Pure and Applied Logic}, 84\penalty0 (2):\penalty0
+  175--217, 1997.
+
+\bibitem[McBride and Paterson(2008)]{mcbride08applicative}
+C.~McBride and R.~Paterson.
+\newblock Applicative programming with effects.
+\newblock \emph{J. Funct. Prog.}, 18\penalty0 (1):\penalty0 1--13, 2008.
+
+\bibitem[Moggi and Sabry(2001)]{DBLP:journals/jfp/MoggiS01}
+E.~Moggi and A.~Sabry.
+\newblock Monadic encapsulation of effects: a revised approach (extended
+  version).
+\newblock \emph{J. Funct. Prog.}, 11\penalty0 (6):\penalty0 591--627, 2001.
+
+\bibitem[Nakano(2000)]{nakano00modality}
+H.~Nakano.
+\newblock A modality for recursion.
+\newblock In \emph{IEEE Symposium on Logic in Computer Science (LICS 2000)},
+  pages 255--266, 2000.
+
+\bibitem[Pitts(1994)]{PittsAM:compavm}
+A.~M. Pitts.
+\newblock Computational adequacy via `mixed' inductive definitions.
+\newblock In \emph{Mathematical Foundations of Programming Semantics, Proc.\
+  9th Int.\ Conf.}, volume 802 of \emph{Lecture Notes in Computer Science},
+  pages 72--82. Springer-Verlag, Berlin, 1994.
+
+\bibitem[Severi and {de Vries}(2012)]{severi12pure}
+P.~Severi and F.-J. {de Vries}.
+\newblock Pure type systems with corecursion on streams: from finite to
+  infinitary normalisation.
+\newblock In \emph{ACM SIGPLAN International Conference on Functional
+  Programming, ICFP'12}, 2012.
+
+\bibitem[Smyth and Plotkin(1982)]{smyth82category}
+M.~B. Smyth and G.~D. Plotkin.
+\newblock The category-theoretic solution of recursive domain equations.
+\newblock \emph{SIAM J. Comput.}, 11\penalty0 (4):\penalty0 761--783, 1982.
+
+\bibitem[Tarski(1955)]{tarski55lattice}
+A.~Tarski.
+\newblock A lattice-theoretical fixpoint theorem and its applications.
+\newblock \emph{Pacific Journal of Mathematics}, 5\penalty0 (2):\penalty0
+  285--309, 1955.
+
+\end{thebibliography}
+
+
+% \bibliographystyle{plainnat}
+% \bibliography{paper}
+
+%\appendix
+%\input{appendix.tex}
+
+
+\end{document}
