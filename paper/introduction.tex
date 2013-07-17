@@ -427,11 +427,17 @@ processes each element one at a time
     \quad \kw{where}~(\ident{x}, \ident{s$'$}) = \elim{deStreamCons}~s
   \end{array}
 \end{displaymath}
-while $\ident{maap}$ processes elements two at a time:
+while $\ident{maap}$ processes elements two at a time by pattern matching:
+%\begin{displaymath}
+%  \begin{array}{@{}l}
+%    \defn{maap}~f~s = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~(\ident{maap}~f~s'')) \\
+%    \quad \kw{where}~(\ident{x}, \ident{s$'$}) = \elim{deStreamCons}~s;~(\ident{y}, \ident{s$''$}) = \elim{deStreamCons}~s'
+%  \end{array}
+%\end{displaymath}
 \begin{displaymath}
   \begin{array}{@{}l}
-    \defn{maap}~f~s = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~(\ident{maap}~f~s'')) \\
-    \quad \kw{where}~(\ident{x}, \ident{s$'$}) = \elim{deStreamCons}~s;~(\ident{y}, \ident{s$''$}) = \elim{deStreamCons}~s'
+    \defn{maap}~f~(\cons{StreamCons}~x~(\cons{StreamCons}~y~s'')) \\
+    \quad = \cons{StreamCons}~(f~x)~(\cons{StreamCons}~(f~y)~(\ident{maap}~f~s''))
   \end{array}
 \end{displaymath}
 If all the elements of the input are available at once, then
