@@ -3,7 +3,7 @@
 
 Coprogramming refers to the practice of explicitly manipulating
 codata, the non-well-founded dual of well-founded data like finite
-lists and trees. Codata is useful for representing the output of an
+lists and trees. Codata are useful for representing the output of an
 infinite process as a never ending stream, or for representing
 potentially infinite search trees of possibilities. The natural way to
 express codata is as a recursively defined coprogram. However, for
@@ -34,8 +34,8 @@ The contributions we make in this paper are the following:
   with \emph{final coalgebras}, the category theoretic description of
   codata. The combination of guarded recursion and clock
   quantification allows us to dispense with the clunky syntactic
-  guardedness checks, and move to a flexible, compositional and local
-  type-based system for ensuring guardedness.
+  guardedness checks, and move to a flexible, compositional and
+  local type-based system for ensuring guardedness.
 \item We define a domain-theoretic denotational model that effectively
   interprets our system in the untyped lazy $\lambda$-calculus. We use
   a multiply-step-indexed model of types to prove that all well-typed
@@ -66,7 +66,7 @@ make use of syntactic guardedness checks to ensure productivity of
 programs defined using corecursion. Without these checks, the
 soundness of these systems cannot be guaranteed. An unfortunate aspect
 of these guardedness checks is their non-compositionality. We
-demonsrate the problem with an example, and see how Nakano's guarded
+demonstrate the problem with an example, and see how Nakano's guarded
 recursion can be used to provide a compositional type-based
 guardedness check.
 
@@ -215,8 +215,8 @@ recursive values:
 \begin{displaymath}
   \kw{fix} :: (\rhd A \to A) \to A
 \end{displaymath}
-The standard typing of the $\kw{fix}$ operator is $(A \to A) \to
-A$. Nakano's alternative typing ensures that recursive definitions
+(The standard typing of the $\kw{fix}$ operator is $(A \to A) \to
+A$.) Nakano's alternative typing ensures that recursive definitions
 must be guarded by only allowing access to recursively generated
 values ``tomorrow''.
 
@@ -274,7 +274,7 @@ occurring under a guardedness type constructor.
 The type system for guarded recursion that we described above allowed
 us to remove the syntactic guardedness check and replace it with a
 compositional type-based one. However, aside from proposing
-applicative functor structure as a convienent way to incorporate the
+applicative functor structure as a convenient way to incorporate the
 guardedness type constructor into a functional language, we have not
 gone much beyond Nakano's original system. We now describe a problem
 with guarded recursion when attempting to combine infinite and finite
@@ -562,7 +562,7 @@ the case when the recursion in the type is guarded by the type
 constructor $\delay\kappa-$. So we do not yet have a dual to the least
 fixpoint type constructor $\mu X. F$. However, as we hinted above in
 the case of streams, we can use clock quantification to construct a
-final $F$-coalgebra, where $F$ need not contain an occurence of
+final $F$-coalgebra, where $F$ need not contain an occurrence of
 $\delay\kappa-$.
 
 For the type $\forall \kappa. \mu X. F[\delay\kappa-]$ we define an
@@ -606,7 +606,7 @@ to safely program and reason about $F$-coalgebras.
 We now present a perhaps unexpected application of the use of clock
 quantification that does not relate to ensuring productivity of
 recursive programs generating infinite data. An interesting use of
-laziness in functional programming languages is to peform single-pass
+laziness in functional programming languages is to perform single-pass
 transformations of data structures that would appear to require at
 least two passes. A classic example, due to Bird
 \cite{bird84circular}, is the $\ident{replaceMin}$ function that
@@ -688,7 +688,7 @@ applicative functor structure of $\delay\kappa$ to indicate when
 computations are taking place ``tomorrow''.
 
 Applying $\ident{feedback}$ to $\ident{replaceMinBody}$, and using
-$\kw{force}$ to remove the now redundant occurence of $\delay\kappa$,
+$\kw{force}$ to remove the now redundant occurrence of $\delay\kappa$,
 we can define the full $\ident{replaceMin}$ function in our system:
 \begin{displaymath}
   \begin{array}{l}

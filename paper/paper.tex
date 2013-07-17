@@ -96,19 +96,19 @@
 
   Systems that offer facilities for productive coprogramming, such as
   the proof assistants Coq and Agda, currently do so through syntactic
-  guardedness checkers. Syntactic guardedness checkers ensure that all
-  self-recursive calls are guarded by a use of a constructor. Such a
-  check ensures productivity. Unfortunately, these syntactic checks
-  are not compositional, and severely complicate coprogramming.
+  guardedness checkers, which ensure that all self-recursive calls are
+  guarded by a use of a constructor. Such a check ensures
+  productivity. Unfortunately, these syntactic checks are not
+  compositional, and severely complicate coprogramming.
 
   Guarded recursion, originally due to Nakano, is tantalising as a
   basis for a flexible and compositional type-based approach to
-  coprogramming. However, as we show, by itself, guarded recursion is
+  coprogramming. However, as we show, guarded recursion by itself is
   not suitable for coprogramming due to the fact that there is no way
   to make finite observations on pieces of infinite data. In this
   paper, we introduce the concept of \emph{clock variables} that index
   Nakano's guarded recursion. Clock variables allow us to ``close
-  over'' the generation of infinite data, and to make finite
+  over'' the generation of infinite codata, and to make finite
   observations, something that is not possible with guarded recursion
   alone.
 \end{abstract}
@@ -130,8 +130,9 @@
 \input{fixpoint-types.tex}
 \input{conclusions.tex}
 
-\paragraph{Acknowledgements} We would like to thank Lars Birkedal and
-Rasmus M{\o}gelberg for extremely useful discussions.
+\paragraph{Acknowledgements} We would like to thank Lars Birkedal,
+Rasmus M{\o}gelberg, and Paula Severi for extremely useful comments
+and discussions.
 
 \begin{thebibliography}{24}
 \providecommand{\natexlab}[1]{#1}

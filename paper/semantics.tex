@@ -6,7 +6,7 @@ guarantees that programs will be productive. We now substantiate this
 claim by defining a domain-theoretic model of our system, and showing
 that the denotation of a well-typed closed term is never $\bot$. We
 accomplish this by using a multiply-step-indexed interpretation of
-types, where the multiple step indexings correspond to the multiple
+types, where the multiple step indexes correspond to the multiple
 clock variables that may be in scope.
 
 \subsection{Semantics of terms}
@@ -162,7 +162,7 @@ definition is presented in \autoref{fig:semantic-fmap}.
     \mathrm{fmap_{F + G}}\ \vec{f}\ (\semCons{Inl}\ x) & = & \semCons{Inl}\ (\mathrm{fmap_F}\ \vec{f}\ x) \\
     \mathrm{fmap_{F + G}}\ \vec{f}\ (\semCons{Inr}\ x) & = & \semCons{Inr}\ (\mathrm{fmap_G}\ \vec{f}\ x) \\
     \mathrm{fmap_{A \to F}}\ \vec{f}\ (\semCons{Lam}\ g) & = & \semCons{Lam}\ (\lambda v. \mathrm{fmap_F}\ \vec{f}\ (g\ v)) \\
-    \mathrm{fmap_{\delay\kappa F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
+    \mathrm{fmap_{\delayX\kappa F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
     \mathrm{fmap_{\forall\kappa.F}}\ \vec{f}\ x & = & \mathrm{fmap_F}\ \vec{f}\ x \\
     \mathrm{fmap_{\mu X. F}}\ \vec{f}\ x & = &
     \begin{array}[t]{@{}l}
@@ -283,7 +283,7 @@ Since $A$ and $B$ are assumed to be semantic types, it immediately
 follows that $A \times B$ and $A + B$ are semantic types.
 
 To interpret function types, we use the usual definition for
-Kripke-indexed logical relations, by quantifing over all smaller clock
+Kripke-indexed logical relations, by quantifying over all smaller clock
 environments. Given semantic types $A$ and $B$, we define:
 \begin{displaymath}
   (A \to B)\delta = \left\{
@@ -360,7 +360,7 @@ For any monotone $F$, $\mu F$ is immediately a semantic type by
 construction, since semantic types are closed under intersection. As
 an initial step towards semantic type soundness for our calculus, we
 demonstrate a semantic well-typedness result for the
-$\mathrm{primrec}$ functon we defined in
+$\mathrm{primrec}$ function we defined in
 \autoref{sec:semantics-of-programs}.
 
 \begin{lemma}\label{lem:primrec-well-typed}

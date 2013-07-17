@@ -54,7 +54,7 @@ formally state the results that we claimed in the introduction.
 
 The types of our system include two kinds of variable that may occur
 free and bound: clock variables in the clock quantifier and the
-clock-indexed guard modality, as well as type variables occuring in
+clock-indexed guard modality, as well as type variables occurring in
 strictly positive positions for the inductive types. We therefore
 formally define when a type is well-formed with respect to contexts of
 clock and type variables, using the rules displayed in
@@ -79,7 +79,7 @@ for forming a type from a type variable that is in scope and rules for
 forming the unit type $1$, product types $A \times B$, sum types $A +
 B$, function types $A \to B$ and least fixpoint types $\mu X. A$. We
 enforce the restriction to strictly positive type operators by
-disallowing occurences of free type variables in the domain component
+disallowing occurrences of free type variables in the domain component
 of function types. In \autoref{sec:typed-terms}, we will see that each
 of the standard type constructors will have the usual corresponding
 term-level constructs; our system subsumes the simply typed
@@ -463,7 +463,7 @@ expressed in our system as follows:
 where $\tyname{SP}$ stands for ``Stream Processor'' and $\tyname{I}$
 and $\tyname{O}$ stand for input and output respectively. In this
 type, the outer fixpoint permits the production of infinitely many
-$O$s, due to the guarded occurence of $X$, while the inner fixpoint
+$O$s, due to the guarded occurrence of $X$, while the inner fixpoint
 only permits a finite amount of $I$s to be read from the input
 stream. This kind of nested fixpoint is not expressible within Coq,
 but is possible with Agda's support for coinductive types
