@@ -39,7 +39,7 @@ The contributions we make in this paper are the following:
 \item We define a domain-theoretic denotational model that effectively
   interprets our system in the untyped lazy $\lambda$-calculus. We use
   a multiply-step-indexed model of types to prove that all well-typed
-  programs are either terminating or productive and to show that
+  programs are either terminating or productive and to show the
   correctness of our reconstruction of final coalgebras.
 \item A side benefit of the combination of guarded recursion and clock
   quantification is that, due to the careful tracking of what data is
@@ -53,7 +53,7 @@ provide references throughout this introduction), this is the first
 paper that formally links guarded recursion to productive
 coprogramming. As recently noted by Birkedal and
 M{\o}gelberg~\cite{birkedal13intensional}, ``guarded recursive types
-can be used to[sic] as a crutch for higher-order programming with
+can be used to [sic] as a crutch for higher-order programming with
 coinductive types''. In this paper, we show that this is indeed
 possible.
 
@@ -98,7 +98,7 @@ extended from finite lists to infinite streams:
   \begin{array}{l}
     \defn{filter} :: (\tyname{Integer} \to \tyname{Bool}) \to \tyname{Stream} \to \tyname{Stream} \\
     \defn{filter}\ \ident{f}\ (\cons{StreamCons}\ \ident{z}\ \ident{s}) = \\
-    \hspace{0.5cm}\kw{if }\ident{f}\ \ident{z}\kw{ then }\ident{filter}\ \ident{f}\ \ident{s}\kw{ else }\cons{StreamCons}\ \ident{z}\ (\ident{filter}\ \ident{f}\ \ident{s})
+    \hspace{0.5cm}\kw{if }\ident{f}\ \ident{z}\kw{ then }\cons{StreamCons}\ \ident{z}\ (\ident{filter}\ \ident{f}\ \ident{s})\kw{ else }\ident{filter}\ \ident{f}\ \ident{s}
   \end{array}
 \end{displaymath}
 This definition is not guarded: in the $\kw{then}$-case of the
@@ -139,8 +139,8 @@ fact.
 
 A possible way out of this problem is to retain the syntactic
 guardedness check, and work around it by changing the type of
-$\ident{f}$. For instance, we could change required type of
-$\ident{f}$ to
+$\ident{f}$. For instance, we could change the required type of
+$\ident{f}$ to:
 \begin{displaymath}
   \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to \tyname{Integer}
 \end{displaymath}
@@ -178,7 +178,7 @@ way. Thus Nakano transports the guardedness checks from the syntactic
 level into the type system. We write this constructor, applied to a
 type $A$, as $\rhd A$ (Nakano uses the notation $\bullet A$, but the
 $\rhd A$ notation has become more common, and conveys an intuitive
-idea of movement in time). A useful way to think of $\rhd A$ is as a
+idea of displacement in time). A useful way to think of $\rhd A$ is as a
 value of $A$ that is only available ``tomorrow'', and the temporal gap
 between today and tomorrow can only be bridged by the application of a
 constructor such as $\cons{StreamCons}$. The reading of $\rhd A$ as a
@@ -190,8 +190,8 @@ We now alter the type of $\ident{f}$ to be:
 \begin{displaymath}
   \ident{f} :: \tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}
 \end{displaymath}
-This type captures the intution that the stream argument to
-$\ident{f}$ must be only be used in a guarded way. To introduce
+This type captures the intuition that the stream argument to
+$\ident{f}$ must only be used in a guarded way. To introduce
 guarded types into the system, we must make some changes to the types
 of our primitives. We alter the type of the constructor
 $\cons{StreamCons}$ as follows, and also introduce a stream
@@ -233,10 +233,10 @@ A) \to \rhd A$ would allow us to collapse multiple guardedness
 obligations.
 
 This method for integrating Nakano's guardedness type constructor into
-a typed $\lambda$-calculus is not the only one.  Nakano uses an system
+a typed $\lambda$-calculus is not the only one.  Nakano uses a system
 of subtyping with respect to the guardedness type constructor that has
 a similar effect to assuming that $\rhd$ is an applicative functor. We
-propose to treat $\rhd$ applicative functor here, due to the greater
+propose to treat $\rhd$ as an applicative functor here, due to the greater
 ease with which it can be incorporated into a standard functional
 programming language like Haskell. Krishnaswami and Benton
 \cite{krishnaswami11semantic,krishnaswami11ultrametric} have presented
@@ -266,7 +266,7 @@ Aside from the explicit uses of $\kw{fix}$ and $\elim{deStreamCons}$,
 which were hidden by syntactic sugar in our previous definition, the
 only substantial changes to the definition are the uses of applicative
 functor apply ($\circledast$). These uses indicate operations that are
-occuring under a guardedness type constructor.
+occurring under a guardedness type constructor.
 
 \subsection{From the infinite to the finite}
 \label{sec:infinite-to-finite}
@@ -516,7 +516,7 @@ addition to $\mu X. F[\delay\kappa X]$ being the least fixpoint of the
 operator $F[\delay\kappa -]$, it is also the \emph{greatest}
 fixpoint. This initial-final coincidence is familiar from domain
 theoretic models of recursive types (see, e.g., Smyth and Plotkin
-\cite{smyth82category}), and has been previously been observed as a
+\cite{smyth82category}), and has previously been observed as a
 feature of guarded recursive types by Birkedal
 \etal~\cite{birkedal12first}.
 
@@ -526,7 +526,7 @@ and $\cons{Cons}$:
 \begin{displaymath}
   \begin{array}[t]{l}
     \defn{unfold$_F$} :: \forall \kappa. (A \to F[\delay\kappa A]) \to A \to \mu X. F[\delay\kappa X] \\
-    \defn{unfold$_F$} = \Lambda \kappa.\lambda \ident{f}. \kw{fix}[\kappa]\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}\ (\ident{fmap}_F\ (\lambda \ident{x}. \ident{g} \circledast \ident{x})\ (\ident{f}\ \ident{a})))
+    \defn{unfold$_F$} = \Lambda \kappa.\lambda \ident{f}. \kw{fix}\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}\ (\ident{fmap}_F\ (\lambda \ident{x}. \ident{g} \circledast \ident{x})\ (\ident{f}\ \ident{a})))
   \end{array}
 \end{displaymath}
 where $\ident{fmap}_F :: (A \to B) \to (F[A] \to F[B])$ is the
@@ -540,7 +540,7 @@ combinator for every $F$, using the primitive recursion
 \begin{displaymath}
   \begin{array}{l}
     \defn{deCons$_F$} :: \forall \kappa. (\mu X. F[\delay\kappa X]) \to F[\delay\kappa \mu X. F[\delay\kappa X]] \\
-    \defn{deCons$_F$} = \Lambda \kappa. \elim{primRec}\ (\lambda \ident{x}.\ \ident{fmap}_{F[\delay\kappa-]}\ (\lambda \ident{y}.\kw{fst}\ \ident{y})\ \ident{x})
+    \defn{deCons$_F$} = \Lambda \kappa. \elim{primRec}\ (\lambda \ident{x}.\ \ident{fmap}_{F[\delayX\kappa-]}\ (\lambda \ident{y}.\kw{fst}\ \ident{y})\ \ident{x})
   \end{array}
 \end{displaymath}
 The proof of \thmref{thm:final-f-de-coalgebra} shows that these
@@ -548,7 +548,7 @@ definitions of $\ident{unfold$_F$}$ and $\ident{deCons$_F$}$ exhibit
 $\mu X. F[\delay\kappa X]$ as the final $F[\delay\kappa-]$-coalgebra,
 using $\ident{deCons$_F$}$ as the structure map. This means that
 $\ident{unfold$_F$}[\kappa] f$ is the unique $F[\delay\kappa-]$-coalgebra
-homomorphism from $\mu X. F[\delay\kappa-]$ to $A$.
+homomorphism from $A$ to $\mu X. F[\delay\kappa-]$.
 
 \paragraph{Final coalgebras}
 \thmref{thm:final-f-de-coalgebra} only gives us final coalgebras in
@@ -567,7 +567,7 @@ argument of type $(A \to F[A])$, with no mention of guardedness.
   \begin{array}{l}
     \defn{unfold$^\nu_F$} :: (A \to F[A]) \to A \to \forall \kappa. \mu X. F[\delay\kappa X] \\
     \defn{unfold$^\nu_F$} = \lambda \ident{f}\ \ident{a}. \Lambda \kappa. \\
-    \quad\quad\kw{fix}[\kappa]\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}\ (\ident{fmap}_F (\lambda \ident{x}. \ident{g} \circledast \kw{pure}\ \ident{x})\ (\ident{f}\ \ident{a})))\ \ident{a}
+    \quad\quad\kw{fix}\ (\lambda \ident{g}\ \ident{a}. \cons{Cons}_F\ (\ident{fmap}_F (\lambda \ident{x}. \ident{g} \circledast \kw{pure}\ \ident{x})\ (\ident{f}\ \ident{a})))\ \ident{a}
   \end{array}
 \end{displaymath}
 We can also define the corresponding deconstructor, building on the
@@ -577,7 +577,7 @@ generalisation of the definition of $\elim{deStreamCons}$ above.
 \begin{displaymath}
   \begin{array}{l}
     \defn{deCons$^\nu_F$} :: (\forall \kappa. \mu X. F[\delay\kappa X]) \to F[\forall \kappa. \mu X. F[\delay\kappa X]] \\
-    \defn{deCons$^\nu_F$} = \ident{fmap$_F$}\ (\lambda x. \kw{force}\ x)\ (\Lambda \kappa. \ident{deCons$_F$}[\kappa]\ (x[\kappa]))
+    \defn{deCons$^\nu_F$} = \lambda x.~\ident{fmap$_F$}\ (\lambda x. \kw{force}\ x)\ (\Lambda \kappa.~\ident{deCons$_F$}[\kappa]\ (x[\kappa]))
   \end{array}
 \end{displaymath}
 In the application of $\ident{fmap$_F$}$, we make use of the type
@@ -648,7 +648,7 @@ operator:
     \defn{feedback} = \Lambda \kappa. \lambda f. \kw{fst}~(\kw{fix}~(\lambda x.~f~(\kw{pure}~(\lambda x. \kw{snd}~x) \circledast x)))
   \end{array}
 \end{displaymath}
-In the application of the $\kw{fix}$ operator, $x : \delay\kappa (A B
+In the application of the $\kw{fix}$ operator, $x : \delay\kappa (B
 \times U)$.  The notation $B[\kappa]$ indicates that $\kappa$ may
 appear free in the type $B$.
 

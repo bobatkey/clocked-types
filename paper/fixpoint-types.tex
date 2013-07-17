@@ -28,7 +28,7 @@ endofunctor on $\ClkPER(\Delta)$, using the semantic $\mathrm{fmap}_F$
 defined in \autoref{fig:semantic-fmap} to define the action on
 morphisms. We have already checked (\lemref{lem:sem-fmap-well-typed})
 that this is well-defined, and it is straightforward to check that the
-usual functor laws hold. It what follows, we will use
+usual functor laws hold. In what follows, we will use
 $\mathit{fmap}_F$ to refer to the action of a functor $F$ on
 morphisms.
 
@@ -56,10 +56,9 @@ there is a unique homomorphism $h : (A,k_A) \to (B,k_B)$.
 
 \paragraph{Guarded Final Co-Algebras} \thmref{thm:initial-f-algebra}
 applies to all functors $F$, and in particular functors of the form
-$F(\delay\kappa-)$ on the category $\ClkPER(\Delta, \kappa)$. For
-these functors, as well as $\mu (F(\delay\kappa -))$ being the carrier
-of an initial algebra, it is also the carrier of a final
-$F(\delay\kappa-)$-coalgebra.
+$F(\delay\kappa-)$ on the category $\ClkPER(\Delta, \kappa)$. As well
+as $\mu (F(\delay\kappa -))$ being the carrier of an initial algebra,
+it is also the carrier of a final $F(\delay\kappa-)$-coalgebra.
 
 Coalgebras are the formal dual of algebras: for an endofunctor $F$, an
 $F$-coalgebra is a pair of an object $A$ and a morphism $k_A : A \to
@@ -78,7 +77,7 @@ unique $F$-coalgebra homomorphism $\mathrm{unfold}~k_A : (A,k_A) \to
 
 \begin{proof} (Sketch) As for \thmref{thm:initial-f-algebra}, since
   $\mu (F(\delay\kappa-))$ is a fixpoint of $F(\delay\kappa-)$, the
-  morphism $F(\mu F) \to \mu F$ is simply realised by the identity
+  morphism $\mu (F(\delay\kappa-)) \to F(\delay\kappa(\mu (F(\delay\kappa-))))$ is simply realised by the identity
   map. Given any other $F$-coalgebra $(A,k_A)$, define a morphism
   $\mathrm{unfold}~k_A : A \to \mu(F(\delay\kappa-))$ as
   $\mathrm{fix}~(\lambda g~a.~\mathrm{fmap}_F~g~(k_A~a))$. It is
@@ -96,10 +95,10 @@ the claim we made in \autoref{sec:main-results-intro} that $\mu
 X. F[\delay\kappa-]$ is the syntactic description of the carrier of a
 final $F[\delay\kappa-]$-coalgebra.
 
-\paragraph{Final Co-Algebras} \thmref{thm:final-f-de-coalgebra} yields
+\paragraph{Final Co-Algebras} \thmref{thm:final-f-de-coalgebra} gives
 final coalgebras in the categories $\ClkPER(\Delta, \kappa)$, where we
 have a spare clock variable. By using clock quantification, we can
-close over this spare clock variable, and so obtain the final
+close over this clock variable, and get the final
 $F$-coalgebra, not just the final $F(\delay\kappa-)$-coalgebra.
 
 \begin{theorem}\label{thm:final-f-coalgebra}

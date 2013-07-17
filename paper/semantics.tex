@@ -17,9 +17,8 @@ theoretic model of the untyped lazy $\lambda$-calculus, described by
 Pitts \cite{PittsAM:compavm}. A feature of this semantics is the
 erasure of anything to do with the guardedness type constructor
 $\delay\kappa-$ and the clock quantification. The $\kw{fix}$ operator
-is interpreted directly as the domain-theoretic fixpoint, i.e.,
-exactly the usual interpretation of recursion in functional
-programming languages.
+is interpreted as the domain-theoretic fixpoint, i.e., exactly the
+usual interpretation of general recursion.
 
 We assume a directed complete partial order with bottom
 ($\mathrm{DCPO}_\bot$), $D$, satisfying the following recursive domain
@@ -234,9 +233,8 @@ We require that our $\clkSem\Delta$-indexed families of PERs
 contravariantly respect the partial ordering on elements of
 $\clkSem\Delta$. This ensures that, as the time left to run on clocks
 increases, the semantic type becomes ever more precise. When we
-interpret universal clock quantification as intersection over all
-approximations, we capture the common core of all the possible
-approximations.
+interpret clock quantification as intersection over all
+approximations, we capture the common core of all the approximations.
 
 Formally, a semantic type for a clock context $\Delta$ is a function
 $A : \clkSem\Delta \to \PER(D)$, satisfying contravariant Kripke
@@ -309,7 +307,7 @@ member of the clock context $\Delta$:
     \end{array}
   \right.
 \end{displaymath}
-Thus, the semantic type operator $\delay\kappa$ acts differently
+The semantic type operator $\delay\kappa$ acts differently
 depending on the time remaining on the clock $\kappa$ in the current
 clock environment $\delta$. When the clock has run to zero,
 $\delay\kappa A$ becomes completely uninformative, equating all pairs
@@ -320,8 +318,8 @@ $(d,d') \in (\delay\kappa A)\delta$ implies $(d,d') \in (\delay\kappa
 A)\delta'$ when $\delta' \sqsubseteq \delta$. If $\delta'(\kappa) = 0$
 then $(\delay\kappa A)\delta' = D \times D \ni (d,d')$. If
 $\delta'(\kappa) = n' + 1$ then $\delta(\kappa) = n + 1$ with $n' \leq
-n$. So $(d,d') \in A(\delta[\kappa \mapsto n])$, and so by the Kripke
-monotonicity for $A$, $(d,d') \in A(\delta'[\kappa \mapsto n']) =
+n$. So $(d,d') \in A(\delta[\kappa \mapsto n])$, and so by $A$'s Kripke
+monotonicity, $(d,d') \in A(\delta'[\kappa \mapsto n']) =
 (\delay\kappa A)\delta'$.
 
 \paragraph{Clock Quantification}
@@ -456,19 +454,18 @@ satisfies the hypotheses of \lemref{lem:primrec-well-typed}.
 \begin{lemma}\label{lem:sem-fmap-well-typed}
   For all $\Delta; \Theta \vdash F : \sortType$, the $\mathrm{fmap}_F$
   defined in \autoref{fig:semantic-fmap} are all semantically
-  well-typed: For all $\delta \in \sem{\Delta}$, for all $\vec{A,B}
-  \in \ClkPER(\Delta)$, and for all $\vec{(g,g') \in (A \to B)\delta}$
-  and $(x,x') \in FA\delta$, we have $(\mathrm{fmap_F}\ \vec{g}\ x,
-  \mathrm{fmap_F}\ \vec{g'}\ x') \in FB\delta$.
+  well-typed: For all $\delta \in \sem{\Delta}$, for all $\overrightarrow{A,B}
+  \in \ClkPER(\Delta)$, and for all $\overrightarrow{(g,g') \in (A \to B)\delta}$
+  and $(x,x') \in FA\delta$, we have $(\mathrm{fmap_F}\ \overrightarrow{g}\ x,
+  \mathrm{fmap_F}\ \overrightarrow{g'}\ x') \in FB\delta$.
 \end{lemma}
 
-It may seem that could prove this lemma by using the syntactic
+It may seem that we could prove this lemma by using the syntactic
 definition of $\ident{fmap}$ from \autoref{fig:fmap-syn} and then
 applying \thmref{thm:semantic-soundness}. However, the semantic
-well-typedness of our definition of the interpretation of
-$\elim{primRec}$ depends on the semantic well-typedness of
-$\mathrm{fmap}$, so we must prove this lemma directly in the model to
-break the circularity.
+well-typedness of our interpretation of $\elim{primRec}$ depends on
+the semantic well-typedness of $\mathrm{fmap}$, so we must prove this
+lemma directly in the model to break the circularity.
 
 \subsection{Semantic type soundness}
 \label{sec:semantic-soundness}
@@ -497,9 +494,8 @@ of PERs over environments:
   \lemref{lem:sem-fmap-well-typed}.
 \end{proof}
 
-This theorem has the following corollary, stating that the denotation
-of a closed program is never $\bot$: well-typed programs always yield
-a proper value.
+The denotation of a closed program is never $\bot$, so well-typed
+programs always yield a proper value.
 \begin{corollary}
   If $-; - \vdash e : A$ then for all $\eta$, $\sem{e}\eta \not=
   \bot$.

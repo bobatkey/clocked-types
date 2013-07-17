@@ -53,6 +53,7 @@
 \newcommand{\sortType}{\texttt{\textup{type}}}
 
 \newcommand{\delay}[1]{\mathord{\rhd\kern-0.4em^{#1}}}
+\newcommand{\delayX}[1]{\mathord{\rhd\kern-0.1em^{#1}}}
 
 \newcommand{\clkSem}[1]{\llbracket #1 \rrbracket}
 \newcommand{\ClkPER}{\mathrm{ClkPER}}
@@ -81,7 +82,7 @@
   intended to terminate, e.g., servers, we are guaranteed that
   programs will always be \emph{productive}. Productivity means that,
   even if a program generates an infinite amount of data, each piece
-  will generated in finite time. The theoretical underpinning for
+  will be generated in finite time. The theoretical underpinning for
   productive programming with infinite output is provided by the
   category theoretic notion of final coalgebras. Hence, we speak of
   \emph{co}programming with non-well-founded \emph{co}data, as a dual
@@ -98,8 +99,8 @@
   basis for a flexible and compositional type-based approach to
   coprogramming. However, as we show, by itself, guarded recursion is
   not suitable for coprogramming due to the fact that there is no way
-  make finite observations on pieces of infinite data. In this paper,
-  we introduce the concept of \emph{clock variables} that index
+  to make finite observations on pieces of infinite data. In this
+  paper, we introduce the concept of \emph{clock variables} that index
   Nakano's guarded recursion. Clock variables allow us to ``close
   over'' the generation of infinite data, and to make finite
   observations, something that is not possible with guarded recursion

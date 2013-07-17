@@ -68,7 +68,7 @@ variable contexts are lists of type variable names, $\Theta = X_1,
 ..., X_n$. Type variables are only used to manage the scope of the
 nested least fixpoint type operator $\mu$; there is no type
 polymorphism in the type system we present here. We generally use
-roman letters $A$, $B$, $C$ to stand for types, but we also
+Roman letters $A$, $B$, $C$ to stand for types, but we also
 occasionally use $F$ and $G$ when we wish to emphasise that types with
 free type variables are strictly positive type operators. For any type
 $A$, we define $\mathit{fc}(A)$ to be the set of free clock variables
@@ -221,12 +221,12 @@ commuting clock quantification with all type formers uniformly.
   \textbf{2. Least Fixpoint Types}
   \begin{mathpar}
     \inferrule* [right=Cons]
-    {\Delta; \Gamma \vdash e : F[\mu X. F]}
-    {\Delta; \Gamma \vdash \cons{Cons$_F$}\ e : \mu X. F}
+    {\Delta; \Gamma \vdash e : F[\mu X. F[X]]}
+    {\Delta; \Gamma \vdash \cons{Cons$_F$}\ e : \mu X. F[X]}
 
     \inferrule* [right=PrimRec]
-    {\Delta; \Gamma \vdash e : F[(\mu X. F) \times A] \to A}
-    {\Delta; \Gamma \vdash \elim{primRec$_F$}\ e : \mu X. F \to A}
+    {\Delta; \Gamma \vdash e : F[(\mu X. F[X]) \times A] \to A}
+    {\Delta; \Gamma \vdash \elim{primRec$_F$}\ e : \mu X. F[X] \to A}
   \end{mathpar}
 
   \bigskip
@@ -234,7 +234,7 @@ commuting clock quantification with all type formers uniformly.
   \textbf{3. Clock Abstraction and Application, and Type Equality}
   \begin{mathpar}
     \inferrule* [right=$\kappa$-Abs]
-    {\Delta, \kappa; \Gamma \vdash e : A \\ \kappa \not\in \mathit{fv}(\Gamma)}
+    {\Delta, \kappa; \Gamma \vdash e : A \\ \kappa \not\in \mathit{fc}(\Gamma)}
     {\Delta; \Gamma \vdash \Lambda \kappa. e : \forall \kappa. A}
 
     \inferrule* [right=$\kappa$-App]
@@ -275,7 +275,17 @@ commuting clock quantification with all type formers uniformly.
   \label{fig:terms}
 \end{figure*}
 
-The well-typed terms of our system are defined by the typing judgement
+The terms of our system are defined by the following grammar:
+\begin{displaymath}
+  \begin{array}{l@{\hspace{0.3em}}r@{\hspace{0.3em}}l}
+    e,f,g &::=& x \sepbar * \sepbar \lambda x.~e \sepbar f e \sepbar (e_1,e_2) \sepbar \kw{fst}~e \sepbar \kw{snd}~e \\
+    & |& \kw{inl}~e \sepbar \kw{inr}~e \sepbar \kw{case}~e~\kw{of}~\kw{inl}~x.f;\kw{inr}~y.g \\
+    & |& \cons{Cons}_F~e \sepbar \elim{primRec}_F~e \sepbar \Lambda \kappa.e \sepbar e[\kappa'] \\
+    & |& \kw{pure}~x \sepbar f \circledast e \sepbar \kw{fix}~f \sepbar \kw{force}~e
+  \end{array}
+\end{displaymath}
+
+The \emph{well-typed} terms of our system are defined by the typing judgement
 $\Delta; \Gamma \vdash e : A$, given by the rules presented in
 \autoref{fig:terms}. Terms are judged to be well-typed with respect to
 a clock variable context $\Delta$, and a typing context $\Gamma$
@@ -339,7 +349,7 @@ protected by a clock quantification.
       \kw{inr}~z. & \kw{inr}~(\ident{fmap}_G~\vec{f}~z)
     \end{array}\\
     \ident{fmap}_{A\to F}&\vec{f}&x&=&\lambda a.~\ident{fmap}_F~\vec{f}~(x~a) \\
-    \ident{fmap}_{\delay\kappa F}&\vec{f}&x&=&\kw{pure}~(\ident{fmap}_F~\vec{f}) \circledast x \\
+    \ident{fmap}_{\delayX\kappa F}&\vec{f}&x&=&\kw{pure}~(\ident{fmap}_F~\vec{f}) \circledast x \\
     \ident{fmap}_{\forall\kappa.F}&\vec{f}&x&=&\Lambda \kappa. \ident{fmap}_F~\vec{f}~(x[\kappa]) \\
     \ident{fmap}_{\mu X. F}&\vec{f}&x&=&\elim{primRec}~(\lambda x. \cons{Cons}(\ident{fmap}_F~\vec{f}~(\lambda x.~\kw{snd}~x)~x))~x      
     \end{array}
@@ -354,8 +364,8 @@ function $\ident{fmap}_F : (A \to B) \to F[A] \to F[B]$, which we
 claimed was defined for each strictly positive type operator $F$. We
 define this operator by structural recursion on the derivation of $F$,
 using the clauses in \autoref{fig:fmap-syn}. Due to the presence of
-nested least fixpoint types in our calculus, we generalise to the case
-of $n$-ary strictly positive type operators.
+nested least fixpoint types in our calculus, we handle $n$-ary
+strictly positive type operators.
 
 \subsection{Programming with guarded types and clocks}
 \label{sec:examples}
@@ -394,7 +404,7 @@ introduction, infinite lists can be constructed using the guarded
 $\kw{fix}$ operator. For example, the infinite repetition of a fixed
 value can be written in our system as:
 \begin{displaymath}
-  \lambda a. \kw{fix}~(\l. \cons{Cons}~(\kw{inr}~(a,l)))
+  \lambda a. \kw{fix}~(\lambda l. \cons{Cons}~(\kw{inr}~(a,l)))
 \end{displaymath}
 If we restrict ourselves to only one clock variable, and always use
 guarded recursive types, then we obtain a programming language similar
@@ -569,7 +579,7 @@ the sum type:
     \defn{now}^\kappa : A \to \tyname{Partial}^\kappa~A \\
     \defn{now}^\kappa = \lambda a.~\cons{Cons}~(\kw{inl}~a) \\
     \\
-    \defn{later}^\kappa : \tyname{Partial}^\kappa~A \to \tyname{Partial}^\kappa~A \\
+    \defn{later}^\kappa : \delay\kappa (\tyname{Partial}^\kappa~A) \to \tyname{Partial}^\kappa~A \\
     \defn{later}^\kappa = \lambda p.~\cons{Cons}~(\kw{inr}~p)
   \end{array}
 \end{displaymath}
@@ -583,15 +593,15 @@ terminates if the Collatz sequence starting from $n$ reaches
 $1$. Whether or not this sequence reaches $1$ for all $n$ is a famous
 unsolved question in number theory.
 \begin{displaymath}
-  \begin{array}{l}
+  \begin{array}{@{}l}
     \defn{collatz} : \tyname{Natural} \to \tyname{Partial}~1 \\
     \defn{collatz} = \lambda n. \Lambda \kappa. \kw{fix}~(\lambda \ident{rec}~\ident{n}.
     \begin{array}[t]{@{}l}
       \kw{if}~n = 1~\kw{then}~\ident{now}^\kappa~(*) \\
       \kw{else}~\kw{if}~n~\ident{mod}~2 = 0~\kw{then} \\
-      \quad \ident{later}^\kappa~(\ident{rec}~(n/2)) \\
+      \quad \ident{later}^\kappa~(\ident{rec} \circledast (\kw{pure}~(n/2))) \\
       \kw{else} \\
-      \quad \ident{later}^\kappa~(\ident{rec}~(3*n + 1)))~n
+      \quad \ident{later}^\kappa~(\ident{rec} \circledast (\kw{pure}~(3*n + 1))))~n
     \end{array}
   \end{array}
 \end{displaymath}
