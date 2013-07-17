@@ -1,4 +1,4 @@
-\documentclass[natbib,preprint]{sigplanconf}
+\documentclass[natbib]{sigplanconf}
 
 \usepackage[usenames]{color}
 \definecolor{citationcolour}{rgb}{0,0.4,0.2}
@@ -73,6 +73,12 @@
 
 \begin{document}
 
+\exclusivelicense
+\conferenceinfo{ICFP~'13}{September 25--27, 2013, Boston, MA, USA}
+\copyrightyear{2013}
+\copyrightdata{978-1-4503-2326-0/13/09}
+\doi{2500365.2500597}
+
 \maketitle
 
 \begin{abstract}
@@ -127,8 +133,161 @@
 \paragraph{Acknowledgements} We would like to thank Lars Birkedal and
 Rasmus M{\o}gelberg for extremely useful discussions.
 
-\bibliographystyle{plainnat}
-\bibliography{paper}
+\begin{thebibliography}{24}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Abel(2004)]{abel04termination}
+A.~Abel.
+\newblock Termination checking with types.
+\newblock \emph{ITA}, 38\penalty0 (4):\penalty0 277--319, 2004.
+
+\bibitem[Appel and McAllester(2001)]{appel01indexed}
+A.~W. Appel and D.~A. McAllester.
+\newblock An indexed model of recursive types for foundational proof-carrying
+  code.
+\newblock \emph{ACM Trans. Program. Lang. Syst.}, 23\penalty0 (5):\penalty0
+  657--683, 2001.
+
+\bibitem[Bird(1984)]{bird84circular}
+R.~S. Bird.
+\newblock {Using Circular Programs to Eliminate Multiple Traversals of Data}.
+\newblock \emph{Acta Informatica}, 21:\penalty0 239--250, 1984.
+
+\bibitem[Birkedal and M{\o}gelberg(2013)]{birkedal13intensional}
+L.~Birkedal and R.~E. M{\o}gelberg.
+\newblock Intensional type theory with guarded recursive types qua fixed points
+  on universes.
+\newblock In \emph{ACM/IEEE Symposium on Logic in Computer Science (LICS
+  2013)}, 2013.
+
+\bibitem[Birkedal et~al.(2010)Birkedal, Schwinghammer, and
+  St{\o}vring]{birkedal10metric}
+L.~Birkedal, J.~Schwinghammer, and K.~St{\o}vring.
+\newblock A metric model of guarded recursion.
+\newblock In \emph{Presented at FICS 2010}, 2010.
+
+\bibitem[Birkedal et~al.(2012)Birkedal, M{\o}gelberg, Schwinghammer, and
+  St{\o}vring]{birkedal12first}
+L.~Birkedal, R.~E. M{\o}gelberg, J.~Schwinghammer, and K.~St{\o}vring.
+\newblock First steps in synthetic guarded domain theory: step-indexing in the
+  topos of trees.
+\newblock \emph{Log. Meth. in Computer Science}, 8\penalty0 (4), 2012.
+
+\bibitem[Capretta(2005)]{capretta05general}
+V.~Capretta.
+\newblock General recursion via coinductive types.
+\newblock \emph{Log. Meth. in Computer Science}, 1\penalty0 (2), 2005.
+
+\bibitem[Danielsson(2010)]{danielsson10beating}
+N.~A. Danielsson.
+\newblock Beating the productivity checker using embedded languages.
+\newblock In \emph{Workshop on Partiality and Recursion in Interactive Theorem
+  Provers (PAR 2010)}, volume~43 of \emph{EPTCS}, pages 29--48, 2010.
+
+\bibitem[Danielsson and Altenkirch(2009)]{danielsson09mixing}
+N.~A. Danielsson and T.~Altenkirch.
+\newblock Mixing induction and coinduction.
+\newblock Draft, 2009.
+
+\bibitem[Dreyer et~al.(2011)Dreyer, Ahmed, and Birkedal]{dreyer11logical}
+D.~Dreyer, A.~Ahmed, and L.~Birkedal.
+\newblock Logical step-indexed logical relations.
+\newblock \emph{Log. Meth. in Computer Science}, 7\penalty0 (2), 2011.
+
+\bibitem[Ghani et~al.(2009)Ghani, Hancock, and
+  Pattinson]{ghani09representations}
+N.~Ghani, P.~Hancock, and D.~Pattinson.
+\newblock Representations of stream processors using nested fixed points.
+\newblock \emph{Log. Meth. in Computer Science}, 5\penalty0 (3), 2009.
+
+\bibitem[Gim{\'e}nez(1994)]{gimenez94codifying}
+E.~Gim{\'e}nez.
+\newblock Codifying guarded definitions with recursive schemes.
+\newblock In \emph{Types for Proofs and Programs, International Workshop
+  TYPES'94}, volume 996 of \emph{Lecture Notes in Computer Science}, pages
+  39--59, 1994.
+
+\bibitem[Hutton and Jaskelioff(2011)]{hutton11representing}
+G.~Hutton and M.~Jaskelioff.
+\newblock Representing contractive functions on streams.
+\newblock Submitted, 2011.
+
+\bibitem[Krishnaswami and Benton(2011{\natexlab{a}})]{krishnaswami11semantic}
+N.~R. Krishnaswami and N.~Benton.
+\newblock A semantic model for graphical user interfaces.
+\newblock In \emph{ACM SIGPLAN international conference on Functional
+  Programming, ICFP 2011}, pages 45--57, 2011{\natexlab{a}}.
+
+\bibitem[Krishnaswami and
+  Benton(2011{\natexlab{b}})]{krishnaswami11ultrametric}
+N.~R. Krishnaswami and N.~Benton.
+\newblock Ultrametric semantics of reactive programs.
+\newblock In \emph{IEEE Symposium on Logic in Computer Science, LICS 2011},
+  pages 257--266, 2011{\natexlab{b}}.
+
+\bibitem[Launchbury and {Peyton Jones}(1994)]{launchbury94lazy}
+J.~Launchbury and S.~L. {Peyton Jones}.
+\newblock Lazy functional state threads.
+\newblock In \emph{Proceedings of the ACM SIGPLAN'94 Conference on Programming
+  Language Design and Implementation (PLDI)}, pages 24--35, 1994.
+
+\bibitem[Loader(1997)]{loader97equational}
+R.~Loader.
+\newblock {Equational Theories for Inductive Types}.
+\newblock \emph{Annals of Pure and Applied Logic}, 84\penalty0 (2):\penalty0
+  175--217, 1997.
+
+\bibitem[McBride and Paterson(2008)]{mcbride08applicative}
+C.~McBride and R.~Paterson.
+\newblock Applicative programming with effects.
+\newblock \emph{J. Funct. Prog.}, 18\penalty0 (1):\penalty0 1--13, 2008.
+
+\bibitem[Moggi and Sabry(2001)]{DBLP:journals/jfp/MoggiS01}
+E.~Moggi and A.~Sabry.
+\newblock Monadic encapsulation of effects: a revised approach (extended
+  version).
+\newblock \emph{J. Funct. Prog.}, 11\penalty0 (6):\penalty0 591--627, 2001.
+
+\bibitem[Nakano(2000)]{nakano00modality}
+H.~Nakano.
+\newblock A modality for recursion.
+\newblock In \emph{IEEE Symposium on Logic in Computer Science (LICS 2000)},
+  pages 255--266, 2000.
+
+\bibitem[Pitts(1994)]{PittsAM:compavm}
+A.~M. Pitts.
+\newblock Computational adequacy via `mixed' inductive definitions.
+\newblock In \emph{Mathematical Foundations of Programming Semantics, Proc.\
+  9th Int.\ Conf.}, volume 802 of \emph{Lecture Notes in Computer Science},
+  pages 72--82. Springer-Verlag, Berlin, 1994.
+
+\bibitem[Severi and {de Vries}(2012)]{severi12pure}
+P.~Severi and F.-J. {de Vries}.
+\newblock Pure type systems with corecursion on streams: from finite to
+  infinitary normalisation.
+\newblock In \emph{ACM SIGPLAN International Conference on Functional
+  Programming, ICFP'12}, 2012.
+
+\bibitem[Smyth and Plotkin(1982)]{smyth82category}
+M.~B. Smyth and G.~D. Plotkin.
+\newblock The category-theoretic solution of recursive domain equations.
+\newblock \emph{SIAM J. Comput.}, 11\penalty0 (4):\penalty0 761--783, 1982.
+
+\bibitem[Tarski(1955)]{tarski55lattice}
+A.~Tarski.
+\newblock A lattice-theoretical fixpoint theorem and its applications.
+\newblock \emph{Pacific Journal of Mathematics}, 5\penalty0 (2):\penalty0
+  285--309, 1955.
+
+\end{thebibliography}
+
+
+% \bibliographystyle{plainnat}
+% \bibliography{paper}
 
 %\appendix
 %\input{appendix.tex}
