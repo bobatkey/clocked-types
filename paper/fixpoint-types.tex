@@ -24,17 +24,19 @@ $\sem{e} : \sem{A} \to \sem{B}$ in $\ClkPER(\Delta)$. We can define
 equality between terms in our syntactic type system in terms of the
 equality on morphisms in this definition. Moreover, each well-formed
 type operator $\Delta; X \vdash F[X] : \sortType$ defines a (strong)
-endofunctor on $\ClkPER(\Delta)$, using the semantic $\mathrm{fmap}_F$
-defined in \autoref{fig:semantic-fmap} to define the action on
-morphisms. We have already checked (\lemref{lem:sem-fmap-well-typed})
-that this is well-defined, and it is straightforward to check that the
-usual functor laws hold. In what follows, we will use
-$\mathit{fmap}_F$ to refer to the action of a functor $F$ on
-morphisms.
+realizable endofunctor on $\ClkPER(\Delta)$ that is monotonic on
+objects, using the semantic $\mathrm{fmap}_F$ defined in
+\autoref{fig:semantic-fmap} to define the action on morphisms. We have
+already checked (\lemref{lem:sem-fmap-well-typed}) that this is
+well-defined, and it is straightforward to check that the usual
+functor laws hold. In what follows, whenever we refer to an
+endofunctor on $\ClkPER(\Delta)$, we mean a realizable functor that is
+monotonic on objects, and we will use $\mathit{fmap}_F$ to refer to
+the action of a functor $F$ on morphisms.
 
 \paragraph{Initial Algebras} Recall that, for any functor $F$, an
 $F$-algebra is a pair of an object $A$ and a morphism $k : FA \to
-A$. A homomorphism $h$ between two $F$-algebras $(A,k_A)$ and
+A$. A homomorphism $h$ between $(A,k_A)$ and
 $(B,k_B)$ is a morphism $h : A \to B$ such that $h \circ k_A = k_B
 \circ \mathit{fmap}_F~h$. An \emph{initial} $F$-algebra is an
 $F$-algebra $(A,k_A)$ such that for any other $F$-algebra $(B,k_B)$,

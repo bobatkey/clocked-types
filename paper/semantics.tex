@@ -494,17 +494,17 @@ of PERs over environments:
   \lemref{lem:sem-fmap-well-typed}.
 \end{proof}
 
-The denotation of a closed program is never $\bot$, so well-typed
-programs always yield a proper value.
 \begin{corollary}
   If $-; - \vdash e : A$ then for all $\eta$, $\sem{e}\eta \not=
   \bot$.
 \end{corollary}
-When the result type $A$ is the stream type $\forall \kappa. \mu X. B
-\times \delay\kappa X$, we can deduce that the denotation of $e$ will
-always be infinite streams of elements of $B$. We further elaborate
-this point in the next section, showing that this type is the carrier
-of the final $(B \times -)$-coalgebra.
+By this corollary, the denotation of a closed program is never $\bot$,
+so well-typed programs always yield a proper value.  When the result
+type $A$ is the stream type $\forall \kappa. \mu X. B \times
+\delay\kappa X$, we can deduce that the denotation of $e$ will always
+be infinite streams of elements of $B$. We further elaborate this
+point in the next section, showing that this type is the carrier of
+the final $(B \times -)$-coalgebra.
 
 %%% Local Variables:
 %%% TeX-master: "paper"
