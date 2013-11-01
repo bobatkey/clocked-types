@@ -1,0 +1,607 @@
+% -*- TeX-engine: xetex -*-
+
+\documentclass[xetex,serif,mathserif]{beamer}
+
+\usepackage{stmaryrd}
+%\usepackage[all]{xy}
+\usepackage{soul}
+
+\usepackage{euler}
+\usepackage[cm-default]{fontspec}
+\usepackage{xunicode}
+\usepackage{xltxtra}
+
+%\usepackage{mathpartir}
+\usepackage{cancel}
+
+\newcommand{\delay}[1]{\mathord{\rhd\kern-0.4em^{#1}}}
+\newcommand{\sem}[1]{\llbracket #1 \rrbracket}
+
+\setmainfont{Linux Libertine O}
+
+\setbeamertemplate{navigation symbols}{}
+\usecolortheme[rgb={0.8,0,0}]{structure}
+\usefonttheme{serif}
+\usefonttheme{structurebold}
+\setbeamercolor{description item}{fg=black}
+
+\definecolor{titlered}{rgb}{0.8,0.0,0.0}
+\definecolor{white}{rgb}{1.0,1.0,1.0}
+
+\newenvironment{slide}[1]{\begin{frame}\frametitle{#1}}{\end{frame}}
+\newenvironment{verbslide}[1]{\begin{frame}[containsverbatim]\frametitle{#1}}{\end{frame}}
+\newcommand{\titlecard}[1]{\begin{frame}\begin{center}\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}#1\end{center}\end{frame}}
+
+\def\greyuntil<#1>#2{{\temporal<#1>{\color{black!0}}{\color{black}}{\color{black}} #2}}
+\def\greyfrom<#1>#2{{\temporal<#1>{\color{black}}{\color{black!40}}{\color{black!40}} #2}}
+
+\definecolor{highlight}{rgb}{0.8,0.1,0.1}
+\definecolor{cons}{rgb}{0.8,0.1,0.2}
+\definecolor{elim}{rgb}{0.1,0.5,0.35}
+\definecolor{defnd}{rgb}{0.1,0.2,0.8}
+\newcommand{\highlight}[1]{\textcolor{highlight}{#1}}
+\newcommand{\cons}[1]{\textcolor{cons}{\textsf{#1}}}
+\newcommand{\elim}[1]{\textcolor{elim}{\textsf{#1}}}
+\newcommand{\defnd}[1]{\mathit{#1}}
+\newcommand{\unitSet}{1}
+\newcommand{\hlchange}[1]{\colorbox{black!20}{$#1$}}
+\newcommand{\hlchangenull}[1]{\colorbox{white}{$#1$}}
+
+\newcommand{\Fam}{\mathrm{Fam}}
+\newcommand{\Set}{\mathrm{Set}}
+\newcommand{\Alg}{\mathrm{Alg}}
+\newcommand{\inn}{\mathit{in}}
+\newcommand{\fold}[1]{\llparenthesis #1 \rrparenthesis}
+%\newcommand{\tyname}[1]{\texttt{#1}}
+\newcommand{\sepbar}{\mathrel|}
+\newcommand{\altdiff}[3]{\alt<-#1>{\hlchangenull{#2}}{\hlchange{#3}}}
+\newcommand{\altdiffX}[3]{\alt<-#1>{\hlchangenull{\textcolor{white}{#3}}}{\hlchange{#3}}}
+
+\newcommand{\adjunction}[4]{{#1} \ar@/_/[r]_{#4}
+    \ar@{}[r]|{\perp}& \ar@/_/[l]_{#3} {#2}}
+
+\newcommand{\pullbackcorner}[1][dr]{\save*!/#1-1.2pc/#1:(-1,1)@^{|-}\restore}
+
+\title{Productive Coprogramming \\ \emph{with} \\ Guarded Recursion}
+\author{Robert Atkey \\ {\small \textcolor{black!60}{\textit{@bentnib}}}\\ \ \\ Conor McBride \\ {\small \textcolor{black!60}{\textit{@pigworker}}}}
+\date{26th September 2013}
+
+\newcommand{\kw}[1]{\textbf{#1}}
+\newcommand{\tyname}[1]{\textit{#1}}
+\newcommand{\ident}[1]{\textrm{#1}}
+\newcommand{\defn}[1]{\textcolor{defnd}{\textrm{#1}}}
+
+\begin{document}
+
+\frame{\titlepage}
+
+%\titlecard{Playing in the Stream}
+
+\begin{slide}{}
+  \only<2,3,4>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.2>>>>}}
+
+  \begin{displaymath}
+    \kw{\altdiffX{1}{}{\kw{co}}data}\ \tyname{Stream} = \cons{StreamCons}\ \tyname{Integer}\ \tyname{Stream}
+  \end{displaymath}
+
+  \medskip
+
+  \only<-2>{\ }
+  \only<3->{\textcolor{titlered}{\emph{Productivity}}: Each element is produced in finite time}
+
+  \medskip
+
+  \only<-3>{\ }
+  \only<4->{\textcolor{titlered}{\emph{Guardedness}}: Each recursive call is “guarded” by a constructor}
+
+  \bigskip
+
+  \begin{displaymath}
+    \begin{array}{@{}l@{}}
+      \left.
+        \begin{array}{@{}l@{}}
+          \defn{ones} :: \tyname{Stream} \\
+          \defn{ones} = \cons{StreamCons}\ 1\ \ident{ones} \\
+          \\
+          \defn{map} :: (\tyname{Integer} \to \tyname{Integer}) \to \tyname{Stream} \to \tyname{Stream} \\
+          \defn{map}\ \ident{f}\ (\cons{StreamCons}\ \ident{x}\ \ident{xs}) = \cons{StreamCons}\ (\ident{f}\ \ident{x})\ (\ident{map}\ \ident{f}\ \ident{xs}) \\
+          % \\
+          % \defn{merge} :: \tyname{Stream} \to \tyname{Stream} \to \tyname{Stream} \\
+          % \defn{merge}\ (\cons{StreamCons}\ \ident{x}\ \ident{xs})\ (\cons{StreamCons}\ \ident{y}\ \ident{ys}) = \\
+          % \quad\quad \cons{StreamCons}\ \ident{x}\ (\cons{StreamCons}\ \ident{y}\ (\ident{merge}\ \ident{xs}\ \ident{ys}))
+        \end{array}
+        \only<-4>{\right. \hspace{1.538cm}}
+      \only<5->{\right\} \textit{guarded}}
+      \\
+      \\
+      \\
+      \\
+      \left.
+        \begin{array}{@{}l}
+          \only<6->{\defn{filter} :: (\tyname{Integer} \to \tyname{Bool}) \to \tyname{Stream} \to \tyname{Stream}} \\
+          \only<6->{\defn{filter}\ \ident{f}\ (\cons{StreamCons}\ \ident{z}\ \ident{s}) =} \\
+          \only<6->{\hspace{0.5cm}\kw{if }\ident{f}\ \ident{z}\kw{ then }\cons{StreamCons}\ \ident{z}\ (\ident{filter}\ \ident{f}\ \ident{s})\kw{ else }\ident{filter}\ \ident{f}\ \ident{s}}
+        \end{array}
+        \only<-6>{\right.}
+        \only<7->{\right\} \textit{unguarded}}
+    \end{array}
+  \end{displaymath}
+\end{slide}
+
+\titlecard{So guardedness $\approx$ productivity?}
+
+\begin{slide}{}
+    \begin{displaymath}
+    \begin{array}{@{}l}
+      \begin{array}{@{}l@{\hspace{0.4em}}l}
+        \defn{mergef} ::
+        &(\tyname{Integer} \to \tyname{Integer} \to \tyname{Stream} \to \tyname{Stream}) \to \\
+        &\tyname{Stream} \to \\
+        &\tyname{Stream} \to \\
+        &\tyname{Stream} \\
+      \end{array} \\
+      \defn{mergef}\ \ident{f}\ (\cons{StreamCons}\ \ident{x}\ \ident{xs})\ (\cons{StreamCons}\ \ident{y}\ \ident{ys}) = \\
+      \quad\quad \ident{f}\ \ident{x}\ \ident{y}\ (\ident{mergef}\ \ident{f}\ \ident{xs}\ \ident{ys})
+    \end{array}
+  \end{displaymath}
+
+  \bigskip
+
+  \begin{minipage}[t][4cm]{1.0\linewidth}    
+\only<2>{
+  A bad choice of argument yields non-productive definitions:
+
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{badf} :: \tyname{Integer} \to \tyname{Integer} \to \tyname{Stream} \to \tyname{Stream} \\
+      \defn{badf}\ \ident{x}\ \ident{y}\ \ident{s} = \ident{s}
+    \end{array}
+  \end{displaymath}
+}
+\only<3>{
+  Coq reports:
+
+  \medskip
+
+  \hspace*{1cm}\emph{Sub-expression “}$\ident{f}\ \ident{x}\ \ident{y}\ (\ident{mergef}\ \ident{f}\ \ident{xs}\ \ident{ys})$\emph{” not in guarded form}
+}
+\only<4>{
+  Get around guardedness check by changing the type of $\ident{f}$?
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{f} :: \tyname{Integer} \to \tyname{Integer} \to \tyname{Integer} \\
+      \defn{f} :: \tyname{Integer} \to \tyname{Integer} \to (\tyname{Integer}, [\tyname{Integer}])
+    \end{array}
+  \end{displaymath}
+  but what about:
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{f}\ \ident{x}\ \ident{y}\ \ident{s} = \cons{StreamCons}\ \ident{x}\ (\ident{map}\ (+1)\ s)
+    \end{array}
+  \end{displaymath}
+}
+  \end{minipage}
+\pause
+\pause
+\pause
+\end{slide}
+
+% Non-compositional, requires a whole program analysis/rewrite
+
+\begin{frame}
+  \only<2>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.2>>>>}}
+  \begin{center}
+    {\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}Can we put guardedness information in the types?} \\
+    \pause
+    \textcolor{black!60}{(Nakano, 2000)}
+  \end{center}
+\end{frame}
+
+\begin{slide}{}
+  \only<2>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.2>>>>}}
+
+  % \begin{displaymath}
+  %   \begin{array}{l}
+  %     \defn{mergef} :: \\
+  %     \quad\quad(\tyname{Integer} \to \tyname{Integer} \to \tyname{Stream} \to \tyname{Stream}) \to \\
+  %     \quad\quad\tyname{Stream} \to \\
+  %     \quad\quad\tyname{Stream} \\
+  %   \end{array}
+  % \end{displaymath}
+
+  % \bigskip
+
+  \begin{displaymath}
+    \defn{f} :: \tyname{Integer} \to \tyname{Integer} \to \altdiffX{1}{}{\rhd}\tyname{Stream} \to \tyname{Stream}
+  \end{displaymath}
+
+  \pause
+
+  % \bigskip
+
+  % Let us add a modality:
+  % \begin{displaymath}
+  %   \defn{f} :: \tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}
+  % \end{displaymath}
+% FIXME: fix the layout of this slide  
+\end{slide}
+
+\begin{slide}{}
+  \only<6>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.1>>>>}}
+
+  \textcolor{titlered}{\emph{Streams today}}:
+  \begin{displaymath}
+    \tyname{Stream}
+  \end{displaymath}
+
+  \bigskip
+  \pause
+
+  \textcolor{titlered}{\emph{Streams tomorrow}}:
+  \begin{displaymath}
+    \rhd \tyname{Stream}
+  \end{displaymath}
+
+  \bigskip
+  \pause
+
+  \textcolor{titlered}{\emph{Construction and Deconstruction}}:
+  \begin{displaymath}
+    \begin{array}{l}
+      \cons{StreamCons}   :: \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream} \\
+      \elim{deStreamCons} :: \tyname{Stream} \to (\tyname{Integer}, \rhd\tyname{Stream})    
+    \end{array}
+  \end{displaymath}
+
+  \bigskip
+  \pause
+
+  \textcolor{titlered}{\emph{Combinators}}:
+  \begin{displaymath}
+    \begin{array}{l@{\hspace{2cm}}l}
+      \kw{fix}    :: (\rhd A \to A) \to A
+      &
+      \begin{array}{l}
+        \kw{pure} :: A \to \rhd A \\
+        \kw{$(\circledast)$} :: \rhd (A \to B) \to \rhd A \to \rhd B
+      \end{array}
+    \end{array}
+  \end{displaymath}
+  
+  \pause
+  \medskip
+
+  \begin{displaymath}
+    \begin{array}{l@{\hspace{2cm}}l}
+      \defn{ones} = \kw{fix}\ (\lambda s.\ \cons{StreamCons}\ 1\ \ident{s})
+      &
+      \altdiff{5}{\kw{fix}\ (\lambda \ident{x}.\ \ident{x})}
+      {\cancel{\kw{fix}\ (\lambda \ident{x}.\ \ident{x})}}
+    \end{array}
+  \end{displaymath}
+
+  \pause
+\end{slide}
+
+\begin{slide}{}
+  \begin{displaymath}
+    \begin{array}{l}
+      \begin{array}{@{}l@{\hspace{0.2em}}l}
+        \defn{mergef} :: &
+        (\tyname{Integer} \to \tyname{Integer} \to \rhd\tyname{Stream} \to \tyname{Stream}) \to \\
+        &\tyname{Stream} \to \\
+        &\tyname{Stream} \to \\
+        &\tyname{Stream}
+      \end{array} \\
+      \defn{mergef}\ \ident{f} = \kw{fix}\ (\lambda \ident{g}\ \ident{xs}\ \ident{ys}. \\
+      \hspace{3cm} \kw{let}\ (\ident{x}, \ident{xs’}) = \elim{deStreamCons}\ \ident{xs} \\
+      \hspace{3cm} \textcolor{white}{\kw{let}\ }(\ident{y}, \ident{ys’}) = \elim{deStreamCons}\ \ident{ys} \\
+      \hspace{3cm} \kw{in}\ \ident{f}\ \ident{x}\ \ident{y}\ (\ident{g} \circledast \ident{xs’} \circledast \ident{ys’}))
+    \end{array}
+  \end{displaymath}
+
+  \begin{displaymath}
+    g :: \rhd(\tyname{Stream} \to \tyname{Stream} \to \tyname{Stream})
+  \end{displaymath}
+\end{slide}
+
+\frame{}
+
+% \titlecard{From the Infinite to the Finite}
+
+\begin{slide}{}
+
+  \textcolor{titlered}{\emph{Problem}}:
+  Can we write
+  \begin{displaymath}
+    \defn{take} :: \tyname{Natural} \to \tyname{Stream} \to [\tyname{Integer}]
+  \end{displaymath}
+  by structural recursion on the first argument?
+
+  \bigskip
+  \pause
+  \textcolor{titlered}{\emph{Solution attempt}}:
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{take}\ 0\ \ident{s} = [] \\
+      \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \alt<-2>{\colorbox{white}{\ident{s’}}}{\colorbox{red!75}{\ident{s’}}} \\
+      \quad \kw{where}\ (\ident{x}, \ident{s’}) = \elim{deStreamCons}\ \ident{s}
+    \end{array}
+  \end{displaymath}
+  \pause
+
+  The type of $\elim{deStreamCons}$ prevents us:
+  \begin{displaymath}
+    \elim{deStreamCons} :: \tyname{Stream} \to (\tyname{Integer}, \rhd\tyname{Stream})    
+  \end{displaymath}
+
+  We cannot leave the “time stream” of the stream.
+\end{slide}
+
+\begin{frame}
+  \begin{displaymath}
+    \begin{array}{l@{\hspace{0.2em}}c@{\hspace{0.3em}}l}
+      \tyname{Stream} &\only<2->\cong& \only<2->{\tyname{Integer} \times \rhd\tyname{Stream}} \\
+      & \only<3->\cong & \only<3->{\tyname{Integer} \times \rhd(\tyname{Integer} \times \rhd\tyname{Stream})} \\
+      & \only<4->\cong & \only<4->{\tyname{Integer} \times \rhd(\tyname{Integer} \times \rhd(\tyname{Integer} \times \rhd\tyname{Stream}))} \\
+      & \only<5->\cong & \only<5->{\tyname{Integer} \times \rhd(\tyname{Integer} \times \rhd(\tyname{Integer} \times \rhd(\tyname{Integer} \times ...)))} \\
+      & & \hspace{10cm}
+    \end{array}
+  \end{displaymath}
+
+  \pause
+  \pause
+  \pause
+  \pause
+  \pause
+  \bigskip
+
+  \begin{center}
+    \emph{How do we get the whole stream?}
+  \end{center}
+
+  \pause
+  \begin{center}
+    \emph{Hold infinity in the palm of your hand?}
+  \end{center}
+\end{frame}
+
+\begin{frame}
+  \only<2>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.2>>>>}}
+  \begin{center}
+    {\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}Eternity in an Hour} \\
+    \pause
+    \textcolor{black!60}{\emph{(or 15 minutes, plus 5 minutes for questions)}}
+  \end{center}
+\end{frame}
+
+% \begin{frame}
+%   \only<2>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.2>>>>}}
+%   \begin{center}
+%     {\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}\emph{A Solution}: Clock Variables} \\
+%     \pause
+%     \textcolor{black!60}{\emph{(and quantification over them)}}
+%   \end{center}
+% \end{frame}
+
+\begin{slide}{}
+  \textcolor{titlered}{\emph{Clock Variables}}, $\kappa$ \\
+  \begin{itemize}
+  \item A clock $\kappa$ represents a fixed amount of time remaining
+  \item $\tyname{Stream}^\kappa$ is a stream for at least the time remaining in $\kappa$
+  \item $\delay\kappa$ removes one unit of time remaining in $\kappa$
+  \end{itemize}
+  
+  \bigskip
+  \pause
+
+  \textcolor{titlered}{\emph{Clocked Construction and Deconstruction}}: \\
+  \begin{displaymath}
+    \begin{array}{l}
+      \cons{StreamCons} :: \forall \kappa.\ \tyname{Integer} \to \delay\kappa \tyname{Stream}^\kappa \to \tyname{Stream}^\kappa \\
+      \elim{deStreamCons} :: \forall \kappa.\ \tyname{Stream}^\kappa \to (\tyname{Integer}, \delay\kappa\tyname{Stream}^\kappa)    
+    \end{array}
+  \end{displaymath}
+
+  \bigskip
+  \pause
+
+  \textcolor{titlered}{\emph{Clocked Combinators}}: \\
+  \begin{displaymath}
+    \begin{array}{l}
+      \kw{pure} :: \forall \kappa.\ A \to \delay\kappa A \\
+      \kw{$(\circledast)$} :: \forall \kappa.\ \delay\kappa (A \to B) \to \delay\kappa A \to \delay\kappa B \\
+      \kw{fix} :: \forall \kappa.\ (\delay\kappa A \to A) \to A
+    \end{array}
+  \end{displaymath}
+
+\end{slide}
+
+% In these types, we used clock quantification just to make the
+% combinators work in multiple contexts. But clock quantification does
+% more than that.
+
+\begin{slide}{}
+  \textcolor{titlered}{\emph{Quantification over all time}}:\\
+
+  \medskip
+
+  \quad\quad $(\forall \kappa.~A)$ is $A$s will all possible amounts of time remaining.
+
+  % For type $A$ with a free clock variable $\kappa$:
+  % \begin{itemize}
+  % \item Form the type $\forall \kappa.\ A$
+  % \item $A$ with all possible amounts of time remaining
+  % \end{itemize}
+
+  \pause
+  \bigskip
+
+  \quad\quad$(\forall \kappa.\ \tyname{Stream}^\kappa)$ is the type of streams that go on forever
+
+  \pause
+  \bigskip
+  \bigskip
+
+  \textcolor{titlered}{\emph{Forcing}}: If we quantify over all time,
+  then tomorrow becomes today:
+  \begin{displaymath}
+    \kw{force} :: (\forall \kappa.\ \delay\kappa A) \to (\forall \kappa.\ A)
+  \end{displaymath}
+
+\end{slide}
+
+\begin{slide}{}
+  \textcolor{titlered}{\emph{Problem}}:
+  Can we write
+  \begin{displaymath}
+    \defn{take} :: \tyname{Natural} \to (\forall \kappa.\ \tyname{Stream}^\kappa) \to [\tyname{Integer}]
+  \end{displaymath}
+  by structural recursion on the first argument?
+
+  \bigskip
+
+  \pause
+  \textcolor{titlered}{\emph{Solution}}:
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{take}\ 0\ \ident{s} = [] \\
+      \defn{take}\ (\ident{n}+1)\ \ident{s} = \ident{x} \mathop{\cons{:}} \ident{take}\ \ident{n}\ \ident{s’} \\
+      \quad \kw{where}\ (\ident{x}, \ident{s’}) = \elim{deStreamCons$^\nu$}\ \ident{s}
+    \end{array}
+  \end{displaymath}
+
+  \pause
+  \begin{displaymath}
+    \begin{array}{l}
+      \elim{deStreamCons$^\nu$} :: (\forall \kappa. \tyname{Stream}^\kappa) \to (\tyname{Integer}, \forall \kappa. \tyname{Stream}^\kappa) \\
+      \elim{deStreamCons$^\nu$}\ \ident{x} = \\
+      \quad\quad
+      \begin{array}[t]{l}
+        (\Lambda \kappa. \kw{fst}\ (\elim{deStreamCons}\ [\kappa]\ (\ident{x}\ [\kappa])),\\
+        \quad\kw{force}\ (\Lambda \kappa. \kw{snd}\ (\elim{deStreamCons}\ [\kappa]\ (\ident{x}\ [\kappa]))))
+      \end{array}
+    \end{array}
+  \end{displaymath}
+\end{slide}
+
+\frame{}
+
+% \begin{frame}
+% %  \only<2>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.2>>>>}}
+%   \begin{center}
+%     {\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}Guarded Types} \\
+    
+%     \medskip
+%     \pause
+%     \emph{with} \\
+%     \medskip
+%     {\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}Clocks} \\
+
+%     \medskip
+%     \pause
+%     \emph{yields} \\
+%     \medskip
+%     {\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}Productive Programming}
+%   \end{center}
+% \end{frame}
+
+\begin{slide}{}
+  \begin{tabular*}{1.0\textwidth}{@{\extracolsep{\fill}}lr}
+    \textcolor{titlered}{\emph{A classic example}}
+    &
+    \textcolor{black!60}{(Bird, 1984)}
+  \end{tabular*}
+  
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{replaceMin} :: \tyname{Tree} \to \tyname{Tree} \\
+      \defn{replaceMin}\ \ident{t} = \\
+      \hspace{1cm} \kw{let}\ (\ident{t’}, \ident{m}) = \ident{replaceMinBody}\ (\ident{t}, \ident{m})\ \kw{in}\ \ident{t’} \\
+      \hspace{0.6cm} \kw{where} \\
+      \hspace{1cm} \defn{replaceMinBody}\ (\cons{Leaf}\ \ident{x},\ \ident{m}) = (\cons{Leaf}\ \ident{m}, \ident{x}) \\
+      \hspace{1cm} \defn{replaceMinBody}\ (\cons{Br}\ \ident{l}\ \ident{r},\ \ident{m}) = \\
+      \hspace{3cm} \kw{let}\ (\ident{l’}, \ident{m$_l$}) = \ident{replaceMinBody}\ \ident{l}\ \ident{m} \\
+      \hspace{3cm} \textcolor{white}{\kw{let}\ }(\ident{r’}, \ident{m$_r$}) = \ident{replaceMinBody}\ \ident{r}\ \ident{m} \\
+      \hspace{3cm} \kw{in}\ (\cons{Br}\ \ident{l’}\ \ident{r’},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+    \end{array}
+  \end{displaymath}
+\end{slide}
+
+\begin{slide}{}
+  %\only<2-5>{\special{pdf: put @thispage <</Trans<</S /Fade /D 0.2>>>>}}
+  \textcolor{titlered}{\emph{Time Stratification with Clocks}}:
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{replaceMinBody} :: \altdiffX{1}{}{\forall \kappa.\ }\tyname{Tree} \to \altdiffX{2}{}{\delay\kappa}\tyname{Integer} \to (\altdiffX{3}{}{\delay\kappa}\tyname{Tree},\ \tyname{Integer}) \\
+      \hspace{0cm} \defn{replaceMinBody}\ \altdiffX{4}{}{[\kappa]}\ (\cons{Leaf}\ \ident{x})\ \ident{m} = (\altdiffX{4}{}{\ident{pure}}\cons{Leaf}\ \altdiffX{4}{}{\circledast}\ident{m}, \ident{x}) \\
+      \hspace{0cm} \defn{replaceMinBody}\ \altdiffX{5}{}{[\kappa]}\ (\cons{Br}\ \ident{l}\ \ident{r}) \ident{m} = \\
+      \hspace{2cm} \kw{let}\ (\ident{l’}, \ident{m$_l$}) = \ident{replaceMinBody}\ \altdiffX{5}{}{[\kappa]}\ \ident{l}\ \ident{m} \\
+      \hspace{2cm} \textcolor{white}{\kw{let}\ }(\ident{r’}, \ident{m$_r$}) = \ident{replaceMinBody}\ \altdiffX{5}{}{[\kappa]}\ \ident{r}\ \ident{m} \\
+      \hspace{2cm} \kw{in}\ (\altdiffX{5}{}{\ident{pure}}\cons{Br}\ \altdiffX{5}{}{\circledast}\ident{l’}\ \altdiffX{5}{}{\circledast}\ident{r’},\ \ident{min}\ \ident{m$_l$}\ \ident{m$_r$})
+    \end{array}
+  \end{displaymath}
+  \pause
+  \pause
+  \pause
+  \pause
+  \pause
+  \pause
+  \textcolor{titlered}{\emph{Closing the circle, safely}}:
+%   \begin{displaymath}
+% %    \defn{trace} :: \forall \kappa.\ ((A[\kappa], \delay\kappa U) \to (B[\kappa], U)) \to A[\kappa] \to B[\kappa]
+%   \end{displaymath}
+  \begin{displaymath}
+    \begin{array}{l}
+      \defn{feedback} : \forall \kappa.~(\delay\kappa U \to (B[\kappa], U)) \to B[\kappa] \\
+      \\
+      \only<5->{\defn{replaceMin} :: \tyname{Tree} \to \tyname{Tree}} \\
+      \only<5->{\defn{replaceMin}\ \ident{t} = \kw{force}\ (\Lambda \kappa.~\ident{feedback}[\kappa]\ (\ident{replaceMinBody}[\kappa])\ \ident{t})}
+%\kw{force}\ (\Lambda \kappa. \ident{trace}[\kappa]\ (\ident{replaceMinBody}[\kappa])\ \ident{t})}
+    \end{array}
+  \end{displaymath}
+\end{slide}
+
+\begin{slide}{}
+  \begin{center}
+    {\usebeamercolor[fg]{frametitle}\usebeamerfont{frametitle}A Slogan} \\
+
+    \pause
+    \medskip
+
+    \emph{Well \st{typed} clocked programs ramble on forever \\ and never get to the $\bot$ of things.}
+
+    \pause
+    \medskip
+
+    \textcolor{black!60}{\emph{(Proved using a Kripke-indexed PER
+        semantics over a domain-theoretic model of the untyped lazy
+        $\lambda$-calculus)}}
+  \end{center}
+\end{slide}
+
+\begin{frame}
+  \textcolor{titlered}{\emph{See the paper for}}:
+  \quad\quad ${\color{titlered}\left\{
+    \begin{array}{l}
+      \textrm{\textcolor{black}{Many more examples - \emph{not just streams!}}} \\
+      \textrm{\textcolor{black}{Formal calculus}} \\
+      \textrm{\textcolor{black}{Type soundness proof (no program denotes $\bot$)}} \\
+      \textrm{\textcolor{black}{Representation of final coalgebras and initial-final coincidence}} \\
+    \end{array}\right.}$
+
+\pause
+\vspace{1.2cm}
+
+\textcolor{titlered}{\emph{The clocks are ticking}}...
+\quad\quad ${\color{titlered}\left\{
+    \begin{array}{l}
+      \textrm{\textcolor{black}{Can well-founded recursion be handled with clocks?}} \\
+      \textrm{\textcolor{black}{Extension to dependent types}} \\
+      \textrm{\textcolor{black}{Call-by-value models/implementation}} \\
+      \textrm{\textcolor{black}{Application to Okasaki's amortised lazy data structures?}}
+    \end{array}\right.}$
+
+\end{frame}
+
+\end{document}
